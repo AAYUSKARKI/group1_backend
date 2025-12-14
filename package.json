@@ -4,6 +4,7 @@
   "description": "<p align=\"center\">\r   <img src=\"https://img.shields.io/badge/Node.js-18%2B-green\" />\r   <img src=\"https://img.shields.io/badge/TypeScript-Ready-blue\" />\r   <img src=\"https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma\" />\r   <img src=\"https://img.shields.io/badge/PostgreSQL-Database-336791?logo=postgresql\" />\r   <img src=\"https://img.shields.io/badge/License-MIT-yellow\" />\r </p>",
   "main": "index.js",
   "scripts": {
+    "dev": "node --import=tsx --env-file=.env --watch src/index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -13,21 +14,34 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
+  "type": "module",
   "bugs": {
     "url": "https://github.com/AAYUSKARKI/RestaurantQRify/issues"
   },
   "homepage": "https://github.com/AAYUSKARKI/RestaurantQRify#readme",
   "devDependencies": {
-    "@types/node": "^25.0.1",
+    "@eslint/js": "^9.39.2",
+    "@tsconfig/node22": "^22.0.5",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.2",
     "@types/pg": "^8.16.0",
+    "eslint": "^9.39.2",
+    "eslint-plugin-perfectionist": "^4.15.1",
+    "prettier": "^3.7.4",
     "prisma": "^7.1.0",
-    "prisma-dbml-generator": "^0.12.0"
+    "prisma-dbml-generator": "^0.12.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.49.0"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.1.0",
     "@prisma/client": "^7.1.0",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "helmet": "^8.1.0",
     "pg": "^8.16.3"
   }
 }
