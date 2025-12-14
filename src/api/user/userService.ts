@@ -87,6 +87,16 @@ export class UserService {
             return ServiceResponse.failure("Error refreshing session", null, StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+    async logoutUser(refreshToken: string): Promise<ServiceResponse<null>> {
+        try {
+            await this.userRepository.revokeSingleToken(refreshToken);
+            return ServiceResponse.success("Logout successful", null, StatusCodes.OK);
+        } catch (error) {
+            console.error("Error logging out user:", error);
+            return ServiceResponse.failure("Error logging out user", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 
 export const userService = new UserService();

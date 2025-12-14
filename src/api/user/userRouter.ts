@@ -4,6 +4,7 @@ import { createApiResponse } from "@/api-docs/openAPIResponseBuilders";
 import { CreateUserSchema, UserResponseSchema, userSchema, LoginResponseSchema, LoginUserSchema, RefreshSessionResponseSchema } from "./userModel";
 import { userController } from "./userController";
 import { StatusCodes } from "http-status-codes";
+import { verifyJWT } from "@/common/middleware/verifyJWT";
 
 export const userRegistry = new OpenAPIRegistry();
 export const userRouter: Router = Router();
@@ -63,6 +64,7 @@ userRegistry.registerPath({
     path: "/api/user/refresh",
     summary: "Refresh a user session",
     tags: ["User"],
+    security: [{ bearerAuth: [] }],
     request: {
         body: {
             description: "Refresh token that needs to be refreshed",
@@ -85,4 +87,34 @@ userRegistry.registerPath({
     responses: createApiResponse(RefreshSessionResponseSchema, "Session refreshed successfully", StatusCodes.OK),
 });
 
-userRouter.post("/user/refresh", userController.refreshSession);
+userRouter.post("/user/refresh", verifyJWT, userController.refreshSession);
+
+userRegistry.registerPath({
+    method: "post",
+    path: "/api/user/logout",
+    summary: "Logout a user",
+    tags: ["User"],
+    security: [{ bearerAuth: [] }],
+    request: {
+        body: {
+            description: "Refresh token that needs to belogged out",
+            required: true,
+            content: {
+                "application/json": {
+                    schema: {
+                        type: "object",
+                        properties: {
+                            refreshToken: {
+                                type: "string",
+                                description: "Refresh token that needs to be revoked",
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    responses: createApiResponse(UserResponseSchema, "Logout successful", StatusCodes.OK),
+});
+
+userRouter.post("/user/logout", verifyJWT, userController.logoutUser);

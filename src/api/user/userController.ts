@@ -27,6 +27,12 @@ class UserController {
         const serviceResponse: ServiceResponse<{ accessToken: string, refreshToken: string } | null> = await userService.refreshSession(refreshToken, ip, userAgent);
         return handleServiceResponse(serviceResponse, res);
     }
+
+    public logoutUser: RequestHandler = async (req: Request, res: Response) => {
+        const refreshToken = req.body.refreshToken as string;
+        const serviceResponse: ServiceResponse<null> = await userService.logoutUser(refreshToken);
+        return handleServiceResponse(serviceResponse, res);
+    }
 }
 
 export const userController = new UserController();
