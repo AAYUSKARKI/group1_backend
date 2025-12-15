@@ -99,9 +99,13 @@ Create `.env` file from `.env.example`:
 
 ```plaintext
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/restaurantqrify
-JWT_SECRET=your_jwt_secret
-JWT_REFRESH_SECRET=your_refresh_secret
+ACCESS_TOKEN_SECRET=your_access_token_secret
+REFRESH_TOKEN_SECRET=your_refresh_secret
 PORT=4000
+REDIS_USERNAME=your_redis_username
+REDIS_PASSWORD=your_redis_password
+REDIS_HOST=your_redis_host
+REDIS_PORT=your_redis_port
 NODE_ENV=development
 ```
 
