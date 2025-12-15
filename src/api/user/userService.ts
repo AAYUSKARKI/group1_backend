@@ -5,7 +5,7 @@ import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
 import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
-import jwt, {Secret} from "jsonwebtoken";
+import jwt, { Secret } from "jsonwebtoken";
 import { tokenBlacklistService } from "@/common/services/tokenBlacklistService";
 import { AUTH_AUDIT_ACTIONS } from "@/common/constants/authAuditActions";
 import logger from "@/common/utils/logger";
@@ -86,7 +86,7 @@ export class UserService {
                 return ServiceResponse.failure("User Account is Inactive", null, StatusCodes.UNAUTHORIZED);
             }
 
-            const refreshToken = jwt.sign({ userId: user.id, role: user.role, jti: uuidv4() }, process.env.REFRESH_TOKEN_SECRET as Secret, { expiresIn: "7d" }); 
+            const refreshToken = jwt.sign({ userId: user.id, role: user.role, jti: uuidv4() }, process.env.REFRESH_TOKEN_SECRET as Secret, { expiresIn: "7d" });
             const accessToken = jwt.sign({ userId: user.id, role: user.role, jti: uuidv4() }, process.env.ACCESS_TOKEN_SECRET as Secret, { expiresIn: "45m" });
             const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
@@ -109,10 +109,19 @@ export class UserService {
         }
     }
 
-    async refreshSession(refreshToken: string,ip?: string, userAgent?: string): Promise<ServiceResponse<{ accessToken: string, refreshToken: string } | null>> {
+    async refreshSession(refreshToken: string, ip?: string, userAgent?: string): Promise<ServiceResponse<{ accessToken: string, refreshToken: string } | null>> {
         try {
             const refreshTokenData = await this.userRepository.findValidRefreshToken(refreshToken);
             if (!refreshTokenData || refreshTokenData.revoked) {
+                await this.auditLogQueue.add("createAuditLog", {
+                    userId: refreshTokenData?.user.id ?? null,
+                    action: AUTH_AUDIT_ACTIONS.REFRESH_FAILURE,
+                    resourceType: "User",
+                    resourceId: refreshTokenData?.user.id ?? null,
+                    payload: { reason: "Invalid or revoked token" },
+                    ip: ip ?? null,
+                    userAgent: userAgent ?? null,
+                });
                 return ServiceResponse.failure("Invalid refresh token", null, StatusCodes.FORBIDDEN);
             }
 
@@ -126,7 +135,7 @@ export class UserService {
                 return ServiceResponse.failure("User Account is Inactive", null, StatusCodes.UNAUTHORIZED);
             }
 
-            if(ip && refreshTokenData.ip && ip !== refreshTokenData.ip) {
+            if (ip && refreshTokenData.ip && ip !== refreshTokenData.ip) {
                 await this.auditLogQueue.add("createAuditLog", {
                     userId: refreshTokenData.user.id,
                     action: AUTH_AUDIT_ACTIONS.SUSPICIOUS_ACTIVITY,
@@ -141,7 +150,7 @@ export class UserService {
                 return ServiceResponse.failure("Suspicious location change detected. Re-login required.", null, StatusCodes.FORBIDDEN);
             }
 
-            if(userAgent && refreshTokenData.userAgent && userAgent !== refreshTokenData.userAgent) {
+            if (userAgent && refreshTokenData.userAgent && userAgent !== refreshTokenData.userAgent) {
                 await this.auditLogQueue.add("createAuditLog", {
                     userId: refreshTokenData.user.id,
                     action: AUTH_AUDIT_ACTIONS.SUSPICIOUS_ACTIVITY,
@@ -190,11 +199,11 @@ export class UserService {
                 const currentTimeInSeconds = Math.floor(Date.now() / 1000);
                 const timeToLive = decodedToken.exp - currentTimeInSeconds;
                 const tokenId = decodedToken.jti;
-                await tokenBlacklistService.blacklistToken(tokenId,timeToLive*1000);
+                await tokenBlacklistService.blacklistToken(tokenId, timeToLive * 1000);
             }
 
             await this.auditLogQueue.add("createAuditLog", {
-                userId: null,
+                userId: decodedToken?.userId ?? null,
                 action: AUTH_AUDIT_ACTIONS.LOGOUT,
                 resourceType: "User",
                 resourceId: null,
