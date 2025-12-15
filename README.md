@@ -18,28 +18,30 @@ Backend is built with **Node.js + Express + Prisma + PostgreSQL**, providing sec
 
 ## ⭐ Features (Backend)
 
-### 🔐 Authentication & Authorization
+### 🛡️ Security & Access Control
 
-* JWT access & refresh tokens
-* Role‑based access control (Admin, Cashier, Waiter, Kitchen)
-* Secure password hashing
+* **Advanced JWT Authentication:** Access & refresh tokens with Role-Based Access Control (RBAC).
+* **Token Blacklisting:** JTI-based immediate revocation of Access Tokens upon logout (via Redis).
+* **Brute-Force Protection:** Specialized rate limiting on critical routes (login, signup, refresh).
+* **Session Security:** IP/User Agent change detection on refresh token usage to prevent session hijacking.
+* **Audit Logging:** Asynchronously logs all authentication events (login success/failure, session refresh, account creation) using a dedicated Queue.
 
-### 🍽 Menu & Restaurant Operations
+### 🍽 Menu & Core Operations
 
-* Menu categories & items CRUD
-* Table & reservation management
-* QR‑based customer ordering flow
-* Order, order-items, and status tracking (PENDING → PREPARING → SERVED)
-* Kitchen Display System (KDS) events & history
-* Billing, discounts, and invoice generation
-* Surplus (flash‑sale) item posting
+* Menu categories & items CRUD.
+* Table, reservation, and multi-branch management.
+* QR‑based customer ordering flow and status tracking (PENDING → PREPARING → SERVED).
+* Kitchen Display System (KDS) real-time events.
+* Billing, discount calculation, and invoice generation.
+* Surplus (flash‑sale) item posting.
 
-### 🛠 System
+### 🛠 System Architecture
 
-* Audit logging
-* Multi-branch support
-* Scalable API architecture
-* PostgreSQL relational schema via Prisma ORM
+* Robust global error handling and API-wide request validation.
+* Background job processing via **BullMQ** (for audit logs).
+* **Husky** pre-commit hooks for enforced Conventional Commits.
+* Structured logging via Winston.
+* OpenAPI documentation generation.
 
 ---
 
