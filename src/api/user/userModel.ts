@@ -1,7 +1,6 @@
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
 import { z } from "zod";
 import { Role } from "@/generated/prisma/enums";
-import { ref } from "node:process";
 
 extendZodWithOpenApi(z);
 
