@@ -122,6 +122,8 @@ REDIS_PORT="your redis port number"
 # Rate Limiting Configuration
 COMMON_RATE_LIMIT_WINDOW_MS="1000"
 COMMON_RATE_LIMIT_MAX_REQUESTS="20"
+AUTH_RATE_LIMIT_MAX_REQUESTS="5"
+AUTH_RATE_LIMIT_WINDOW_MS="60000"
 ```
 
 > **⚠ Do not commit real credentials.**
