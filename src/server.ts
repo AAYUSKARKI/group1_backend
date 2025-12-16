@@ -6,6 +6,7 @@ import { openAPIRouter } from "./api-docs/openAPIRouter";
 import errorHandler from "./common/middleware/errorHandler";
 import { userRouter } from "./api/user/userRouter";
 import rateLimiter from "./common/middleware/rateLimiter";
+import { healthCheckRouter } from "./api/healthCheck/healthCheckRouter";
 const app: Express = express();
 const server = http.createServer(app);
 
@@ -21,6 +22,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use("/api", userRouter);
+app.use("/api", healthCheckRouter);
+
+// OpenAPI Documentation
 app.use(openAPIRouter);
 
 app.use(errorHandler());
