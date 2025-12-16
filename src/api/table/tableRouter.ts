@@ -1,18 +1,19 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { Router } from "express";
 import { createApiResponse } from "@/api-docs/openAPIResponseBuilders";
-import { CreateTableSchema,TableResponseSchema,tableSchema, AssignWaiterSchema, UpdateTableSchema } from "./tableModel";
+import { CreateTableSchema, TableResponseSchema, tableSchema, AssignWaiterSchema, UpdateTableSchema } from "./tableModel";
 import { tableController } from "./tableController";
 import { StatusCodes } from "http-status-codes";
 import { verifyJWT } from "@/common/middleware/verifyJWT";
 import { checkRole } from "@/common/middleware/verifyRole";
+import { TableStatus } from "@/generated/prisma/enums";
 
 export const tableRegistry = new OpenAPIRegistry();
 export const tableRouter: Router = Router();
 
 tableRegistry.register("Table", tableSchema);
 
-tableRegistry.registerComponent("securitySchemes","bearerAuth", {
+tableRegistry.registerComponent("securitySchemes", "bearerAuth", {
     type: "http",
     scheme: "bearer",
     bearerFormat: "JWT",
@@ -96,6 +97,48 @@ tableRegistry.registerPath({
 });
 
 tableRouter.patch("/table/unassign/:id", verifyJWT, checkRole(["ADMIN"]), tableController.unassignTableFromWaiter);
+
+tableRegistry.registerPath({
+    method: "patch",
+    path: "/api/table/status/{id}",
+    summary: "Update a table's status",
+    tags: ["Table"],
+    parameters: [
+        {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+                type: "string",
+            },
+            description: "ID of the table to be updated",
+            example: "123e4567-e89b-12d3-a456-426655440000",
+        },
+    ],
+    request: {
+        body: {
+            description: "Table status update details",
+            required: true,
+            content: {
+                "application/json": {
+                    schema: {
+                        type: "object",
+                        properties: {
+                            status: {
+                                type: "string",
+                                enum: Object.keys(TableStatus),
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
+    security: [{ bearerAuth: [] }],
+    responses: createApiResponse(TableResponseSchema, "Table status updated successfully", StatusCodes.OK),
+});
+
+tableRouter.patch("/table/status/:id", verifyJWT, checkRole(["ADMIN"]), tableController.updateTableStatus);
 
 tableRegistry.registerPath({
     method: "put",

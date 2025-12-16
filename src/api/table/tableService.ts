@@ -6,6 +6,7 @@ import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
 import { TABLE_AUDIT_ACTIONS } from "@/common/constants/tableAuditActions";
 import logger from "@/common/utils/logger";
+import { TableStatus } from "@/generated/prisma/enums";
 
 export class TableService {
     private auditLogQueue = new AuditLogQueue();
@@ -84,6 +85,25 @@ export class TableService {
         } catch (error) {
             logger.error("Error unassigning table from waiter:", error);
             return ServiceResponse.failure("Error unassigning table from waiter", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async updateTableStatus(tableId: string, status: TableStatus, userId: string): Promise<ServiceResponse<TableResponse | null>> {
+        try {
+            const table = await this.tableRepository.updateTableStatus(tableId, status);
+            await this.auditLogQueue.add("createAuditLog", {
+                userId,
+                action: TABLE_AUDIT_ACTIONS.TABLE_STATUS_CHANGED,
+                resourceType: "Table",
+                resourceId: table.id,
+                payload: table,
+                ip: null,
+                userAgent: null,
+            });
+            return ServiceResponse.success<TableResponse>("Table status updated successfully", table, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error updating table status:", error);
+            return ServiceResponse.failure("Error updating table status", null, StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
 

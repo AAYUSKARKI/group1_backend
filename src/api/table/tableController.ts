@@ -2,6 +2,7 @@ import { Request, RequestHandler, Response } from "express";
 import { ServiceResponse, handleServiceResponse } from "@/common/utils/serviceResponse";
 import { CreateTableSchema, UpdateTableSchema, AssignWaiterSchema, TableResponse } from "./tableModel";
 import { tableService } from "./tableService";
+import { TableStatus } from "@/generated/prisma/enums";
 
 class TableController {
     public createTable: RequestHandler = async (req: Request, res: Response) => {
@@ -41,6 +42,20 @@ class TableController {
         const userId = req.user.id;
         const tableId = req.params.id;        
         const serviceResponse: ServiceResponse<TableResponse | null> = await tableService.unassignTableFromWaiter(tableId, userId);
+        return handleServiceResponse(serviceResponse, res);
+    }
+
+    public updateTableStatus: RequestHandler = async (req: Request, res: Response) => {
+        if (!req.user || req.user.role !== "ADMIN") {
+            return handleServiceResponse(
+                ServiceResponse.failure("You do not have permission to perform this action", null, 403),
+                res
+            );
+        }
+        const userId = req.user.id;
+        const tableId = req.params.id;
+        const data = TableStatus[req.body.status as keyof typeof TableStatus];
+        const serviceResponse: ServiceResponse<TableResponse | null> = await tableService.updateTableStatus(tableId, data, userId);
         return handleServiceResponse(serviceResponse, res);
     }
 
