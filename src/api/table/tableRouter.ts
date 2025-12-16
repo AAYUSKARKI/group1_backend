@@ -75,6 +75,29 @@ tableRegistry.registerPath({
 tableRouter.patch("/table/assign/:id", verifyJWT, checkRole(["ADMIN"]), tableController.assignTableToWaiter);
 
 tableRegistry.registerPath({
+    method: "patch",
+    path: "/api/table/unassign/{id}",
+    summary: "Unassign a table from a waiter",
+    tags: ["Table"],
+    parameters: [
+        {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+                type: "string",
+            },
+            description: "ID of the table to be unassigned",
+            example: "123e4567-e89b-12d3-a456-426655440000",
+        },
+    ],
+    security: [{ bearerAuth: [] }],
+    responses: createApiResponse(TableResponseSchema, "Table unassigned successfully", StatusCodes.OK),
+});
+
+tableRouter.patch("/table/unassign/:id", verifyJWT, checkRole(["ADMIN"]), tableController.unassignTableFromWaiter);
+
+tableRegistry.registerPath({
     method: "put",
     path: "/api/table/{id}",
     summary: "Update a table",

@@ -31,6 +31,19 @@ class TableController {
         return handleServiceResponse(serviceResponse, res);
     }
 
+    public unassignTableFromWaiter: RequestHandler = async (req: Request, res: Response) => {
+        if (!req.user || req.user.role !== "ADMIN") {
+            return handleServiceResponse(
+                ServiceResponse.failure("You do not have permission to perform this action", null, 403),
+                res
+            );
+        }        
+        const userId = req.user.id;
+        const tableId = req.params.id;        
+        const serviceResponse: ServiceResponse<TableResponse | null> = await tableService.unassignTableFromWaiter(tableId, userId);
+        return handleServiceResponse(serviceResponse, res);
+    }
+
     public updateTable: RequestHandler = async (req: Request, res: Response) => {
         if (!req.user || req.user.role !== "ADMIN") {
             return handleServiceResponse(

@@ -68,6 +68,25 @@ export class TableService {
         }
     }
 
+    async unassignTableFromWaiter(tableId: string, userId: string): Promise<ServiceResponse<TableResponse | null>> {
+        try {
+            const table = await this.tableRepository.unassignTableFromWaiter(tableId);
+            await this.auditLogQueue.add("createAuditLog", {
+                userId,
+                action: TABLE_AUDIT_ACTIONS.TABLE_UNASSIGNED_WAITER,
+                resourceType: "Table",
+                resourceId: table.id,
+                payload: table,
+                ip: null,
+                userAgent: null,
+            });
+            return ServiceResponse.success<TableResponse>("Table unassigned from waiter successfully", table, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error unassigning table from waiter:", error);
+            return ServiceResponse.failure("Error unassigning table from waiter", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
     async updateTable(tableId: string, data: UpdateTable, userId: string): Promise<ServiceResponse<TableResponse | null>> {
         try {
             if(data.assignedTo){
