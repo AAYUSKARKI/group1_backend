@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import type { MenuItemResponse, CreateMenuItem } from "./menuItemModel";
+import type { MenuItemResponse, CreateMenuItem, UpdateMenuItem } from "./menuItemModel";
 import { MenuItemRepository } from "./menuItemRepository";
 import { uploadOnCloudinary } from "@/common/lib/cloudinary";
 // import { CategoryRepository } from "../category/categoryRepository";
@@ -71,6 +71,16 @@ export class MenuItemService {
         } catch (error) {
             logger.error("Error getting all menu items:", error);
             return ServiceResponse.failure("Error getting all menu items", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async updateMenuItem(menuItemId: string, data: UpdateMenuItem): Promise<ServiceResponse<MenuItemResponse | null>> {
+        try {
+            const menuItem = await this.menuItemRepository.updateMenuItem(menuItemId, data);
+            return ServiceResponse.success<MenuItemResponse>("Menu item updated successfully", menuItem, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error updating menu item:", error);
+            return ServiceResponse.failure("Error updating menu item", null, StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
 }

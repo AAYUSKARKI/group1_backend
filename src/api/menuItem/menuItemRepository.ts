@@ -1,5 +1,5 @@
 import { prisma } from "@/common/lib/prisma";
-import { MenuItemResponse, CreateMenuItem } from "./menuItemModel";
+import { MenuItemResponse, CreateMenuItem, UpdateMenuItem } from "./menuItemModel";
 
 export class MenuItemRepository {
     async createMenuItem(data: CreateMenuItem, imageUrl: string): Promise<MenuItemResponse> {
@@ -36,6 +36,23 @@ export class MenuItemRepository {
 
     async findAll(): Promise<MenuItemResponse[]> {
         return prisma.menuItem.findMany({
+            select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true,
+                imageUrl: true,
+                isAvailable: true,
+                isVeg: true,
+                categoryId: true,
+            }
+        });
+    }
+
+    async updateMenuItem(menuItemId: string, data: UpdateMenuItem): Promise<MenuItemResponse> {
+        return prisma.menuItem.update({
+            where: { id: menuItemId },
+            data,
             select: {
                 id: true,
                 name: true,

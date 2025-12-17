@@ -1,6 +1,6 @@
 import { Request, RequestHandler, Response } from "express";
 import { ServiceResponse, handleServiceResponse } from "@/common/utils/serviceResponse";
-import { CreateMenuItemSchema, MenuItemResponse } from "./menuItemModel";
+import { CreateMenuItemSchema, MenuItemResponse, UpdateMenuItemSchema } from "./menuItemModel";
 import { menuItemService } from "./menuItemService";
 
 class MenuItemController {
@@ -32,6 +32,19 @@ class MenuItemController {
 
     public getAllMenuItems: RequestHandler = async (req: Request, res: Response) => {
         const serviceResponse: ServiceResponse<MenuItemResponse[] | null> = await menuItemService.getAllMenuItems();
+        return handleServiceResponse(serviceResponse, res);
+    }
+
+    public updateMenuItem: RequestHandler = async (req: Request, res: Response) => {
+        if (!req.user || req.user.role !== "ADMIN") {
+            return handleServiceResponse(
+                ServiceResponse.failure("You do not have permission to perform this action", null, 403),
+                res
+            );
+        }
+        const menuItemId = req.params.id;
+        const data = UpdateMenuItemSchema.parse(req.body);
+        const serviceResponse: ServiceResponse<MenuItemResponse | null> = await menuItemService.updateMenuItem(menuItemId, data);
         return handleServiceResponse(serviceResponse, res);
     }
 }

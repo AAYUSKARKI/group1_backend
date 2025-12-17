@@ -1,7 +1,7 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { Router } from "express";
 import { createApiResponse } from "@/api-docs/openAPIResponseBuilders";
-import { CreateMenuItemSchema, menuItemSchema, MenuItemResponseSchema } from "./menuItemModel";
+import { CreateMenuItemSchema, menuItemSchema, MenuItemResponseSchema, UpdateMenuItemSchema } from "./menuItemModel";
 import { StatusCodes } from "http-status-codes";
 import { verifyJWT } from "@/common/middleware/verifyJWT";
 import { checkRole } from "@/common/middleware/verifyRole";
@@ -79,3 +79,37 @@ menuItemRegistry.registerPath({
 });
 
 menuItemRouter.get("/menu-item", menuItemController.getAllMenuItems);
+
+menuItemRegistry.registerPath({
+    method: "put",
+    path: "/api/menu-item/{id}",
+    summary: "Update menu item by ID",
+    tags: ["MenuItem"],
+    parameters: [
+        {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+                type: "string",
+            },
+            description: "ID of the menu item to be updated",
+            example: "123e4567-e89b-12d3-a456-426655440000",
+        },
+    ],
+    request: {
+        body: {
+            description: "Menu item object that needs to be updated",
+            required: true,
+            content: {
+                "application/json": {
+                    schema: UpdateMenuItemSchema,
+                },
+            },
+        },
+    },
+    security: [{ bearerAuth: [] }],
+    responses: createApiResponse(MenuItemResponseSchema, "Menu item updated successfully", StatusCodes.OK),
+});
+
+menuItemRouter.put("/menu-item/:id", verifyJWT, checkRole(["ADMIN"]), menuItemController.updateMenuItem);
