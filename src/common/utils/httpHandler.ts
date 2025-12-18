@@ -5,13 +5,19 @@ import { handleServiceResponse, ServiceResponse } from "@/common/utils/serviceRe
 
 export const validateRequest = (schema: ZodType) => (req: Request, res: Response, next: NextFunction) => {
   try {
-    schema.parse({ body: req.body, query: req.query, params: req.params });
+    schema.parse(req.body); 
     next();
   } catch (err) {
     if (err instanceof ZodError) {
-      const errorMessage = `Invalid input: ${err.issues.map((e) => e.message).join(", ")}`;
-      const statusCode = StatusCodes.BAD_REQUEST;
-      const serviceResponse = ServiceResponse.failure(errorMessage, null, statusCode);
+      const errorMessage = err.issues
+        .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+        .join(", ");
+
+      const serviceResponse = ServiceResponse.failure(
+        `Invalid input: ${errorMessage}`,
+        null,
+        StatusCodes.BAD_REQUEST
+      );
       return handleServiceResponse(serviceResponse, res);
     }
     return res.status(StatusCodes.INTERNAL_SERVER_ERROR).send({ message: "Unexpected error" });
