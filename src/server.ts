@@ -9,6 +9,7 @@ import rateLimiter from "./common/middleware/rateLimiter";
 import { healthCheckRouter } from "./api/healthCheck/healthCheckRouter";
 import { tableRouter } from "./api/table/tableRouter";
 import { menuItemRouter } from "./api/menuItem/menuItemRouter";
+import { reservationRouter } from "./api/reservation/reservationRouter";
 
 const app: Express = express();
 const server = http.createServer(app);
@@ -28,6 +29,7 @@ app.use("/api", userRouter);
 app.use("/api", healthCheckRouter);
 app.use("/api", tableRouter);
 app.use("/api", menuItemRouter);
+app.use("/api", reservationRouter);
 
 // OpenAPI Documentation
 app.use(openAPIRouter);
