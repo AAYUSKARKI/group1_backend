@@ -15,17 +15,21 @@ import { StatusCodes } from "http-status-codes";
 export const categoryRouter = Router();
 export const categoryRegistry = new OpenAPIRegistry();
 
+categoryRegistry.registerComponent("securitySchemes", "bearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT",
+});
+
 categoryRegistry.register("Category", categorySchema);
 
 categoryRegistry.registerPath({
   method: "post",
   path: "/api/category",
-  summary: "Create category",
   tags: ["Category"],
   security: [{ bearerAuth: [] }],
   request: {
     body: {
-      required: true,
       content: {
         "application/json": { schema: CreateCategorySchema },
       },
@@ -48,7 +52,6 @@ categoryRouter.post(
 categoryRegistry.registerPath({
   method: "get",
   path: "/api/category",
-  summary: "Get all categories",
   tags: ["Category"],
   security: [{ bearerAuth: [] }],
   responses: createApiResponse(
@@ -63,17 +66,9 @@ categoryRouter.get("/category", verifyJWT, categoryController.getAllCategories);
 categoryRegistry.registerPath({
   method: "get",
   path: "/api/category/{id}",
-  summary: "Get category by ID",
   tags: ["Category"],
-  parameters: [
-    {
-      name: "id",
-      in: "path",
-      required: true,
-      schema: { type: "string" },
-    },
-  ],
   security: [{ bearerAuth: [] }],
+  parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
   responses: createApiResponse(
     CategoryResponseSchema,
     "Category found",
@@ -86,17 +81,9 @@ categoryRouter.get("/category/:id", verifyJWT, categoryController.getCategoryByI
 categoryRegistry.registerPath({
   method: "put",
   path: "/api/category/{id}",
-  summary: "Update category",
   tags: ["Category"],
-  parameters: [
-    {
-      name: "id",
-      in: "path",
-      required: true,
-      schema: { type: "string" },
-    },
-  ],
   security: [{ bearerAuth: [] }],
+  parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
   request: {
     body: {
       content: {
@@ -121,17 +108,9 @@ categoryRouter.put(
 categoryRegistry.registerPath({
   method: "delete",
   path: "/api/category/{id}",
-  summary: "Delete category",
   tags: ["Category"],
-  parameters: [
-    {
-      name: "id",
-      in: "path",
-      required: true,
-      schema: { type: "string" },
-    },
-  ],
   security: [{ bearerAuth: [] }],
+  parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
   responses: createApiResponse(
     CategoryResponseSchema,
     "Category deleted",

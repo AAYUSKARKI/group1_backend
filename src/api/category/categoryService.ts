@@ -1,8 +1,9 @@
 import { StatusCodes } from "http-status-codes";
 import { CategoryRepository } from "./categoryRepository";
-import { CreateCategory, UpdateCategory, CategoryResponse } from "./categoryModel";
+import { CreateCategory, CategoryResponse } from "./categoryModel";
 import { ServiceResponse } from "@/common/utils/serviceResponse";
 import logger from "@/common/utils/logger";
+import { uploadOnCloudinary } from "@/common/lib/cloudinary";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
 import { CATEGORY_AUDIT_ACTIONS } from "@/common/constants/categoryAuditActions";
 
@@ -10,9 +11,23 @@ export class CategoryService {
   private repo = new CategoryRepository();
   private auditQueue = new AuditLogQueue();
 
-  async create(data: CreateCategory, userId: string): Promise<ServiceResponse<CategoryResponse | null>> {
+  async create(
+    data: CreateCategory,
+    userId: string,
+    imagePath?: string
+  ): Promise<ServiceResponse<CategoryResponse | null>> {
     try {
-      const category = await this.repo.create(data);
+      let imageUrl: string | null = null;
+
+      if (imagePath) {
+        const uploaded = await uploadOnCloudinary(imagePath);
+        imageUrl = uploaded?.secure_url ?? null;
+      }
+
+      const category = await this.repo.create({
+        name: data.name,
+        imageUrl,
+      });
 
       await this.auditQueue.add("createAuditLog", {
         userId,
@@ -22,7 +37,7 @@ export class CategoryService {
         payload: category,
       });
 
-      return ServiceResponse.success<CategoryResponse>(
+      return ServiceResponse.success(
         "Category created successfully",
         category,
         StatusCodes.CREATED
@@ -32,7 +47,7 @@ export class CategoryService {
 
       if (error.code === "P2002") {
         return ServiceResponse.failure(
-          "Category with this name already exists",
+          "Category already exists",
           null,
           StatusCodes.CONFLICT
         );
@@ -46,122 +61,64 @@ export class CategoryService {
     }
   }
 
-  async getAll(): Promise<ServiceResponse<CategoryResponse[] | null>> {
-    try {
-      const categories = await this.repo.findAll();
-
-      return ServiceResponse.success<CategoryResponse[]>(
-        "Categories fetched successfully",
-        categories,
-        StatusCodes.OK
-      );
-    } catch (error) {
-      logger.error(error);
-      return ServiceResponse.failure(
-        "Failed to fetch categories",
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
+  async getAll() {
+    return ServiceResponse.success(
+      "Categories fetched",
+      await this.repo.findAll(),
+      StatusCodes.OK
+    );
   }
 
-  async getById(id: string): Promise<ServiceResponse<CategoryResponse | null>> {
-    try {
-      const category = await this.repo.findById(id);
-
-      if (!category) {
-        return ServiceResponse.failure(
-          "Category not found",
-          null,
-          StatusCodes.NOT_FOUND
-        );
-      }
-
-      return ServiceResponse.success<CategoryResponse>(
-        "Category fetched successfully",
-        category,
-        StatusCodes.OK
-      );
-    } catch (error) {
-      logger.error(error);
+  async getById(id: string) {
+    const category = await this.repo.findById(id);
+    if (!category)
       return ServiceResponse.failure(
-        "Failed to fetch category",
+        "Category not found",
         null,
-        StatusCodes.INTERNAL_SERVER_ERROR
+        StatusCodes.NOT_FOUND
       );
-    }
+
+    return ServiceResponse.success(
+      "Category fetched",
+      category,
+      StatusCodes.OK
+    );
   }
 
-  async update(id: string, data: UpdateCategory, userId: string): Promise<ServiceResponse<CategoryResponse | null>> {
-    try {
-      const existing = await this.repo.findById(id);
-      if (!existing) {
-        return ServiceResponse.failure(
-          "Category not found",
-          null,
-          StatusCodes.NOT_FOUND
-        );
-      }
+  async update(id: string, data: any, userId: string) {
+    const updated = await this.repo.update(id, data);
 
-      const updated = await this.repo.update(id, data);
+    await this.auditQueue.add("createAuditLog", {
+      userId,
+      action: CATEGORY_AUDIT_ACTIONS.CATEGORY_UPDATED,
+      resourceType: "Category",
+      resourceId: id,
+      payload: updated,
+    });
 
-      await this.auditQueue.add("createAuditLog", {
-        userId,
-        action: CATEGORY_AUDIT_ACTIONS.CATEGORY_UPDATED,
-        resourceType: "Category",
-        resourceId: id,
-        payload: updated,
-      });
-
-      return ServiceResponse.success<CategoryResponse>(
-        "Category updated successfully",
-        updated,
-        StatusCodes.OK
-      );
-    } catch (error) {
-      logger.error(error);
-      return ServiceResponse.failure(
-        "Failed to update category",
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
+    return ServiceResponse.success(
+      "Category updated",
+      updated,
+      StatusCodes.OK
+    );
   }
 
-  async delete(id: string, userId: string): Promise<ServiceResponse<null>> {
-    try {
-      const existing = await this.repo.findById(id);
-      if (!existing) {
-        return ServiceResponse.failure(
-          "Category not found",
-          null,
-          StatusCodes.NOT_FOUND
-        );
-      }
+  async delete(id: string, userId: string) {
+    await this.repo.softDelete(id);
 
-      await this.repo.softDelete(id);
+    await this.auditQueue.add("createAuditLog", {
+      userId,
+      action: CATEGORY_AUDIT_ACTIONS.CATEGORY_DELETED,
+      resourceType: "Category",
+      resourceId: id,
+      payload: null,
+    });
 
-      await this.auditQueue.add("createAuditLog", {
-        userId,
-        action: CATEGORY_AUDIT_ACTIONS.CATEGORY_DELETED,
-        resourceType: "Category",
-        resourceId: id,
-        payload: null,
-      });
-
-      return ServiceResponse.success<null>(
-        "Category deleted successfully",
-        null,
-        StatusCodes.OK
-      );
-    } catch (error) {
-      logger.error(error);
-      return ServiceResponse.failure(
-        "Failed to delete category",
-        null,
-        StatusCodes.INTERNAL_SERVER_ERROR
-      );
-    }
+    return ServiceResponse.success(
+      "Category deleted",
+      null,
+      StatusCodes.OK
+    );
   }
 }
 

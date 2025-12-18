@@ -11,7 +11,6 @@ import { tableRouter } from "./api/table/tableRouter";
 import { menuItemRouter } from "./api/menuItem/menuItemRouter";
 import { categoryRouter } from "./api/category/categoryRouter";
 import { reservationRouter } from "./api/reservation/reservationRouter";
-
 const app: Express = express();
 const server = http.createServer(app);
 

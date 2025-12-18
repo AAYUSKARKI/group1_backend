@@ -2,7 +2,7 @@ import { prisma } from "@/common/lib/prisma";
 import { CreateCategory, UpdateCategory } from "./categoryModel";
 
 export class CategoryRepository {
-  create(data: CreateCategory) {
+    create(data: { name: string; imageUrl: string | null }) {
     return prisma.category.create({
       data,
       select: { id: true, name: true, imageUrl: true },
@@ -24,7 +24,7 @@ export class CategoryRepository {
     });
   }
 
-  update(id: string, data: UpdateCategory) {
+  update(id: string, data: { name?: string }) {
     return prisma.category.update({
       where: { id },
       data,
