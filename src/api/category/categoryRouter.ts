@@ -61,7 +61,7 @@ categoryRegistry.registerPath({
   ),
 });
 
-categoryRouter.get("/category", verifyJWT, categoryController.getAllCategories);
+categoryRouter.get("/category", categoryController.getAllCategories);
 
 categoryRegistry.registerPath({
   method: "get",
@@ -76,7 +76,7 @@ categoryRegistry.registerPath({
   ),
 });
 
-categoryRouter.get("/category/:id", verifyJWT, categoryController.getCategoryById);
+categoryRouter.get("/category/:id", categoryController.getCategoryById);
 
 categoryRegistry.registerPath({
   method: "put",

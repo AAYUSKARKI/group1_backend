@@ -23,6 +23,10 @@ export const CreateCategorySchema = z.object({
     description: "Category name",
     example: "Drinks",
   }),
+  imageUrl: z.string().url().nullable().optional().openapi({
+    description: "Category image URL",
+    example: "https://res.cloudinary.com/demo/image/upload/v123/drinks.png",
+  }),
 });
 
 export const UpdateCategorySchema = z.object({
