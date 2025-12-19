@@ -112,6 +112,27 @@ export class OrderService {
         }
     }
 
+    async getOrderById(orderId: string): Promise<ServiceResponse<OrderResponse | null>> {
+        try {
+            const order = await this.orderRepository.findOrderById(orderId);
+            if (!order) {
+                return ServiceResponse.failure("Order not found", null, StatusCodes.NOT_FOUND);
+            }
+            return ServiceResponse.success<OrderResponse>("Order found successfully", order, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error getting order by id:", error);
+            return ServiceResponse.failure("Error getting order by id", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 
+    async getAllOrders(): Promise<ServiceResponse<OrderResponse[] | null>> {
+        try {
+            const orders = await this.orderRepository.findAllOrders();
+            return ServiceResponse.success<OrderResponse[]>("Orders found successfully", orders, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error getting all orders:", error);
+            return ServiceResponse.failure("Error getting all orders", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 export const orderService = new OrderService();

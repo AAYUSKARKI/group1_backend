@@ -61,4 +61,21 @@ export class OrderRepository {
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable
         });
     }
+
+    async findOrderById(id: string): Promise<OrderResponse | null> {
+        return prisma.order.findUnique({
+            where: { id },
+            include: {
+                items: true,
+            },
+        });
+    }
+
+    async findAllOrders(): Promise<OrderResponse[]> {
+        return prisma.order.findMany({
+            include: {
+                items: true,
+            },
+        });
+    }
 }

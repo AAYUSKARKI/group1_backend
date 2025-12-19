@@ -5,6 +5,7 @@ import { CreateOrderSchema, orderSchema, OrderResponseSchema } from "./orderMode
 import { StatusCodes } from "http-status-codes";
 import { orderController } from "./orderController";
 import { optionalJwt } from "@/common/middleware/optionalJwt";
+import { verifyJWT } from "@/common/middleware/verifyJWT";
 
 export const orderRegistry = new OpenAPIRegistry();
 export const orderRouter: Router = Router();
@@ -38,3 +39,36 @@ orderRegistry.registerPath({
 });
 
 orderRouter.post("/order",optionalJwt, orderController.createOrder);
+
+orderRegistry.registerPath({
+    method: "get",
+    path: "/api/order/{id}",
+    summary: "Get order by ID",
+    tags: ["Order"],
+    parameters: [
+        {
+            name: "id",
+            in: "path",
+            description: "ID of the order to get",
+            required: true,
+            schema: {
+                type: "string",
+            },
+        },
+    ],
+    responses: createApiResponse(OrderResponseSchema, "Order found successfully", StatusCodes.OK),
+    security: [{ bearerAuth: [] }],
+});
+
+orderRouter.get("/order/:id", verifyJWT, orderController.getOrderById);
+
+orderRegistry.registerPath({
+    method: "get",
+    path: "/api/order",
+    summary: "Get all orders",
+    tags: ["Order"],
+    responses: createApiResponse(OrderResponseSchema.array(), "Orders found successfully", StatusCodes.OK),
+    security: [{ bearerAuth: [] }],
+});
+
+orderRouter.get("/order", verifyJWT, orderController.getAllOrders);
