@@ -13,7 +13,18 @@ class OrderController {
         const data = CreateOrderSchema.parse(req.body);
         const serviceResponse: ServiceResponse<OrderResponse | null> = await orderService.createOrder(data,user?.id);
         return handleServiceResponse(serviceResponse, res);
-    } 
+    }
+    
+    public getOrderById: RequestHandler = async (req: Request, res: Response) => {
+        const orderId = req.params.id;
+        const serviceResponse: ServiceResponse<OrderResponse | null> = await orderService.getOrderById(orderId);
+        return handleServiceResponse(serviceResponse, res);
+    }
+
+    public getAllOrders: RequestHandler = async (req: Request, res: Response) => {
+        const serviceResponse: ServiceResponse<OrderResponse[] | null> = await orderService.getAllOrders();
+        return handleServiceResponse(serviceResponse, res);
+    }
 }
 
 export const orderController = new OrderController();

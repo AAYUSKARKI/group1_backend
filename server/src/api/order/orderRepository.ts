@@ -54,11 +54,40 @@ export class OrderRepository {
                     id: createdOrder.id,
                 },
                 include: {
-                    items: true,
+                    items: {
+                        include: {
+                            menuItem: true
+                        }
+                    }
                 },
             });
         },{
             isolationLevel: Prisma.TransactionIsolationLevel.Serializable
+        });
+    }
+
+    async findOrderById(id: string): Promise<OrderResponse | null> {
+        return prisma.order.findUnique({
+            where: { id },
+            include: {
+                items: {
+                    include: {
+                        menuItem: true
+                    }
+                }
+            },
+        });
+    }
+
+    async findAllOrders(): Promise<OrderResponse[]> {
+        return prisma.order.findMany({
+            include: {
+                items: {
+                    include: {
+                        menuItem: true
+                    }
+                }
+            },
         });
     }
 }
