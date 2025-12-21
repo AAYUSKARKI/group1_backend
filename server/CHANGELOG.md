@@ -6,6 +6,132 @@ All notable changes to this project will be documented in this file.
 
 
 
+## 2025-12-21
+
+
+- Migration of schema([5ea49f0](https://github.com/AAYUSKARKI/RestaurantQRify/commits/5ea49f0ffe4195fd5c578f12ea10947a3534dc7c) )
+
+
+
+## 2025-12-21
+
+
+- Add router for bill both express and openAPI([8c3724c](https://github.com/AAYUSKARKI/RestaurantQRify/commits/8c3724c7025246d73ba48facbedc344e5dca150d) )
+
+
+
+## 2025-12-21
+
+
+- Add order controller to handle req and res of create bill method([69e6476](https://github.com/AAYUSKARKI/RestaurantQRify/commits/69e64769f1d89c1ee6171564f5a5ac685cfb652a) )
+
+
+
+## 2025-12-21
+
+
+- Add menu item in order repsonse to match bill creation([4b22744](https://github.com/AAYUSKARKI/RestaurantQRify/commits/4b22744c7809e0f77a86814769a796580f7a2285) )
+
+
+
+## 2025-12-21
+
+
+- Add audit action for bill to create audit logs([780c36f](https://github.com/AAYUSKARKI/RestaurantQRify/commits/780c36f6039375eb314ef84df3b3793f5cc0e309) )
+
+
+
+## 2025-12-21
+
+
+- Update prisma model to make subTotal required in Order table([8c9d4cc](https://github.com/AAYUSKARKI/RestaurantQRify/commits/8c9d4cca704ce092d868dcd7bd706e5c80e7c746) )
+
+
+
+## 2025-12-21
+
+
+- Add upload stream to handle stram upload in cloudinary([81447f1](https://github.com/AAYUSKARKI/RestaurantQRify/commits/81447f1b735a1ce9f1467bc46fd5168474d86fd3) )
+
+
+
+## 2025-12-21
+
+
+- Update order query to include nested data([4e2dccd](https://github.com/AAYUSKARKI/RestaurantQRify/commits/4e2dccdd849e1e4c063e8191d32e2186e22bd3de) )
+
+
+
+## 2025-12-21
+
+
+- Add business logic to create a bill([a4b539b](https://github.com/AAYUSKARKI/RestaurantQRify/commits/a4b539b8daaa1da5324e66ec5bd6c4a7dd88e81a) )
+
+
+
+## 2025-12-21
+
+
+- Add openAPI docs for bill routes and docs update([befe55f](https://github.com/AAYUSKARKI/RestaurantQRify/commits/befe55fb9cbfc1d09da899f69b044034472c863e) )
+
+
+
+## 2025-12-21
+
+
+- Add bill generation service to generate a bill([c2007a2](https://github.com/AAYUSKARKI/RestaurantQRify/commits/c2007a2f541a639adb91c9e131b94cff6b791fae) )
+
+
+
+## 2025-12-21
+
+
+- Add query to create bill and update pdf url([b7e6cdd](https://github.com/AAYUSKARKI/RestaurantQRify/commits/b7e6cdd0795734de8a473ef4dd7b4b6a99ec7bd3) )
+
+
+
+## 2025-12-21
+
+
+- Add test mock data to test bill generation([f4485f3](https://github.com/AAYUSKARKI/RestaurantQRify/commits/f4485f3def7f5c4d8ee6438ea866296b78e4658b) )
+
+
+
+## 2025-12-21
+
+
+- Integrate bill router into main app([8814ec5](https://github.com/AAYUSKARKI/RestaurantQRify/commits/8814ec5b045a34a2c1cee1c800c1e3a41af23c18) )
+
+
+
+## 2025-12-21
+
+
+- Add bill model to ensure validation([c26b073](https://github.com/AAYUSKARKI/RestaurantQRify/commits/c26b07341a4ab3109426fafe45f0e5dfe00037b1) )
+
+
+
+## 2025-12-21
+
+
+- Update and install required dependencies([123b1ad](https://github.com/AAYUSKARKI/RestaurantQRify/commits/123b1ad1fadf88ea08272683654fd10dfaad3473) )
+
+
+
+## 2025-12-19
+
+
+- Implement get all order and order by id([ad80553](https://github.com/AAYUSKARKI/RestaurantQRify/commits/ad8055315cd06756d824680b12f20a1d8fa4dffe) )
+
+
+
+## 2025-12-19
+
+
+- Type fixed on router([6104a17](https://github.com/AAYUSKARKI/RestaurantQRify/commits/6104a17eba83de2415475d56a2f63e9bd3e9399f) )
+
+
+
 ## 2025-12-19
 
 
