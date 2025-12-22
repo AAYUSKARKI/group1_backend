@@ -8,6 +8,16 @@ export class SurplusRepository {
                 ...surplusMark,
                 markedBy,
             },
+            include: {
+                menuItem: {
+                    select: {
+                        name: true,
+                        price: true,
+                        imageUrl: true,
+                        description: true
+                    }
+                }
+            }
         });
         return surplusMarkResponse;
     }
@@ -27,5 +37,31 @@ export class SurplusRepository {
             }
         });
         return !!overlap;
+    }
+
+    async findActiveSurplusMark(): Promise<SurplusMarkResponse[] | null> {
+        return prisma.surplusMark.findMany({
+            where: {
+                deletedAt: null,
+                surplusAt: { lte: new Date() },
+                surplusUntil: { gte: new Date() },
+                menuItem: {
+                    isAvailable: true
+                },
+            },
+            include: {
+                menuItem: {
+                    select: {
+                        name: true,
+                        price: true,
+                        imageUrl: true,
+                        description: true
+                    }
+                }
+            },
+            orderBy: {
+                surplusUntil: "asc"
+            }
+        });
     }
 }

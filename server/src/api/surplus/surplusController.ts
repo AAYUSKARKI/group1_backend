@@ -1,7 +1,7 @@
 import { Request, RequestHandler, Response } from "express";
 import { ServiceResponse, handleServiceResponse } from "@/common/utils/serviceResponse";
 import { surplusService } from "./surplusService";
-import { CreateSurplusMarkSchema, SurplusMarkResponse } from "./surplusModel";
+import { CreateSurplusMarkSchema, DailySpecialResponse, SurplusMarkResponse } from "./surplusModel";
 class SurplusController {
     public createSurplusMark: RequestHandler = async (req: Request, res: Response) => {
         if(!req.user) {
@@ -11,6 +11,11 @@ class SurplusController {
         const serviceResponse: ServiceResponse<SurplusMarkResponse | null> = await surplusService.createSurplus(data, req.user.id);
         return handleServiceResponse(serviceResponse, res);
     }
+
+    public getActiveSpecials: RequestHandler = async (_req: Request, res: Response) => {
+    const serviceResponse: ServiceResponse<DailySpecialResponse[] | null> = await surplusService.getDailySpecials();
+    return handleServiceResponse(serviceResponse, res);
+}
 }
 
 export const surplusController = new SurplusController();

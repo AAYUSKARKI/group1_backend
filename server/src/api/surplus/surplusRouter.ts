@@ -1,7 +1,7 @@
 import { OpenAPIRegistry } from "@asteasolutions/zod-to-openapi";
 import { Router } from "express";
 import { createApiResponse } from "@/api-docs/openAPIResponseBuilders";
-import { CreateSurplusMarkSchema, SurplusMarkResponseSchema } from "./surplusModel";
+import { CreateSurplusMarkSchema, SurplusMarkResponseSchema, DailySpecialResponseSchema } from "./surplusModel";
 import { StatusCodes } from "http-status-codes";
 import { surplusController } from "./surplusController";
 import { verifyJWT } from "@/common/middleware/verifyJWT";
@@ -40,4 +40,14 @@ surplusRegistry.registerPath({
 });
 
 surplusRouter.post("/surplus", verifyJWT, checkRole([Role.ADMIN, Role.KITCHEN]), surplusController.createSurplusMark);
+
+surplusRegistry.registerPath({
+    method: "get",
+    path: "/api/surplus",
+    summary: "Get all active daily specials",
+    tags: ["Surplus"],
+    responses: createApiResponse(DailySpecialResponseSchema, "Daily specials retrieved successfully", StatusCodes.OK),
+});
+
+surplusRouter.get("/surplus", surplusController.getActiveSpecials);
 

@@ -1,11 +1,12 @@
 import { StatusCodes } from "http-status-codes";
 import { SurplusRepository } from "./surplusRepository";
-import type { CreateSurplusMark, SurplusMarkResponse } from "./surplusModel";
+import type { CreateSurplusMark, DailySpecialResponse, SurplusMarkResponse } from "./surplusModel";
 import { MenuItemRepository } from "../menuItem/menuItemRepository";
 import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
 import logger from "@/common/utils/logger";
 import { SURPLUS_MARK_AUDIT_ACTIONS } from "@/common/constants/surplusAuditAction";
+import { Prisma } from "@/generated/prisma/client";
 
 export class SurplusService {
     private surplusRepository: SurplusRepository;
@@ -55,5 +56,38 @@ export class SurplusService {
             return ServiceResponse.failure("Error creating Surplus Mark", null, StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
+
+    async getDailySpecials(): Promise<ServiceResponse<DailySpecialResponse[] | null>> {
+    try {
+        const activeMarks = await this.surplusRepository.findActiveSurplusMark();
+
+        if (!activeMarks) {
+            return ServiceResponse.failure("No active specials found", null, StatusCodes.NOT_FOUND);
+        }
+        
+        const formattedSpecials = activeMarks.map(mark => {
+            const originalPrice = new Prisma.Decimal(mark.menuItem.price);
+            const discountFactor = new Prisma.Decimal(1).minus(mark.discountPct.div(100));
+            const salePrice = originalPrice.mul(discountFactor).toDecimalPlaces(2);
+
+            return {
+                id: mark.id,
+                menuItemId: mark.menuItemId,
+                name: mark.menuItem.name,
+                originalPrice,
+                salePrice,
+                discountPct: mark.discountPct,
+                endsAt: mark.surplusUntil,
+                imageUrl: mark.menuItem.imageUrl,
+                note: mark.note
+            };
+        });
+
+        return ServiceResponse.success<DailySpecialResponse[]>("Daily specials fetched", formattedSpecials, StatusCodes.OK);
+    } catch (error) {
+        logger.error("Error fetching specials:", error);
+        return ServiceResponse.failure("Internal Server Error", null, StatusCodes.INTERNAL_SERVER_ERROR);
+    }
+}
 }
 export const surplusService = new SurplusService();
