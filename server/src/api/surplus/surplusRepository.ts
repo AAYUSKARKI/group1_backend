@@ -1,5 +1,6 @@
 import { prisma } from "@/common/lib/prisma";
-import { CreateSurplusMark, SurplusMarkResponse } from "./surplusModel";
+import { CreateSurplusMark, SurplusMark, SurplusMarkResponse } from "./surplusModel";
+import { Prisma } from "@/generated/prisma/client";
 
 export class SurplusRepository {
     async createSurplusMark(surplusMark: CreateSurplusMark, markedBy: string): Promise<SurplusMarkResponse> {
@@ -37,6 +38,20 @@ export class SurplusRepository {
             }
         });
         return !!overlap;
+    }
+
+    async findSurplusMarkByMenuItemId(menuItemId: string): Promise<{ discountPct: Prisma.Decimal } | null> {
+        return prisma.surplusMark.findFirst({
+            where: {
+                menuItemId,
+                surplusAt: { lte: new Date() },
+                surplusUntil: { gte: new Date() },
+                deletedAt: null
+            },
+            select: {
+                discountPct: true
+            }
+        });
     }
 
     async findActiveSurplusMark(): Promise<SurplusMarkResponse[] | null> {
