@@ -7,7 +7,7 @@ import { MenuItemRepository } from "../menuItem/menuItemRepository";
 import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
 import logger from "@/common/utils/logger";
-import { Prisma, Role, TableStatus } from "@/generated/prisma/client";
+import { Prisma, TableStatus } from "@/generated/prisma/client";
 import { BadRequestError } from "@/common/utils/customError";
 import { ORDER_AUDIT_ACTIONS } from "@/common/constants/orderAuditAction";
 import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
@@ -59,7 +59,12 @@ export class OrderService {
 
             const orderItemsData = data.items.map((item) => {
                 const menuItem = menuItemMap.get(item.menuItemId)!;
-                const unitPrice = menuItem.price;
+                let unitPrice = menuItem.price;
+                const activeSurplus = menuItem.surplusMarks?.[0];
+                if (activeSurplus) {
+                    const discountMultiplier = new Prisma.Decimal(1).minus(new Prisma.Decimal(activeSurplus.discountPct).dividedBy(100));
+                    unitPrice = unitPrice.times(discountMultiplier).toDecimalPlaces(2);
+                }
                 const discountAmount = item.discountAmount;
                 const subTotalBeforeDiscount = new Prisma.Decimal(item.qty).times(unitPrice);
                 const subTotalAfterDiscount = subTotalBeforeDiscount.minus(discountAmount);
