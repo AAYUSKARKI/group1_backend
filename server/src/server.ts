@@ -16,6 +16,7 @@ import { menuItemAllergenRouter } from "./api/menuItemAllergen/menuItemAllergenR
 import { orderRouter } from "./api/order/orderRouter";
 import { billRouter } from "./api/bill/billRouter";
 import { surplusRouter } from "./api/surplus/surplusRouter";
+import { auditLogRouter } from "./api/auditlog/auditlogRouter";
 
 const app: Express = express();
 const server = http.createServer(app);
@@ -42,6 +43,7 @@ app.use("/api", menuItemAllergenRouter);
 app.use("/api", orderRouter);
 app.use("/api", billRouter);
 app.use("/api", surplusRouter);
+app.use("/api", auditLogRouter);
 
 // OpenAPI Documentation
 app.use(openAPIRouter);
