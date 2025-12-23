@@ -1,5 +1,5 @@
 import { StatusCodes } from "http-status-codes";
-import type { UserResponse, CreateUser, LoginUser, LoginResponse } from "./userModel";
+import type { UserResponse, CreateUser, LoginUser, LoginResponse, UpdateUser } from "./userModel";
 import { UserRepository } from "./userRepository";
 import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { AuditLogQueue } from "@/queues/instances/auditlogQueue";
@@ -216,6 +216,80 @@ export class UserService {
         } catch (error) {
             logger.error("Error logging out user:", error);
             return ServiceResponse.failure("Error logging out user", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getUserById(userId: string): Promise<ServiceResponse<UserResponse | null>> {
+        try {
+            const user = await this.userRepository.findById(userId);
+            if (!user) {
+                return ServiceResponse.failure("Users Not Found", null, StatusCodes.NOT_FOUND);
+            }
+            return ServiceResponse.success<UserResponse>("User found successfully", user, StatusCodes.OK)
+        } catch (error) {
+            logger.error("Error Finding Users", error);
+            return ServiceResponse.failure("Error finding user", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async getAllUsers(): Promise<ServiceResponse<UserResponse[] | null>> {
+        try {
+            const users = await this.userRepository.getAllUsers();
+            if (!users) {
+                return ServiceResponse.failure("Users Not Found", null, StatusCodes.NOT_FOUND);
+            }
+            return ServiceResponse.success<UserResponse[]>("Users found successfully", users, StatusCodes.OK)
+        } catch (error) {
+            logger.error("Error Finding Users", error);
+            return ServiceResponse.failure("Error finding users", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async updateUser(userId: string, data: UpdateUser): Promise<ServiceResponse<UserResponse | null>> {
+        try {
+            const user = await this.userRepository.findById(userId);
+            if (!user) {
+                return ServiceResponse.failure("User not found", null, StatusCodes.NOT_FOUND);
+            }
+            const updatedUser = await this.userRepository.updateUser(userId, data);
+
+            await this.auditLogQueue.add("createAuditLog", {
+                userId: user.id,
+                action: AUTH_AUDIT_ACTIONS.ACCOUNT_UPDATED,
+                resourceType: "User",
+                resourceId: user.id,
+                payload: updatedUser,
+                ip: null,
+                userAgent: null,
+            });
+            return ServiceResponse.success<UserResponse>("User updated successfully", updatedUser, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error updating user:", error);
+            return ServiceResponse.failure("Error updating user", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    async deleteUser(userId: string): Promise<ServiceResponse<UserResponse | null>> {
+        try {
+            const user = await this.userRepository.findById(userId);
+            if (!user) {
+                return ServiceResponse.failure("User not found", null, StatusCodes.NOT_FOUND);
+            }
+            const deletedUser = await this.userRepository.deleteUser(userId);
+
+            await this.auditLogQueue.add("createAuditLog", {
+                userId: user.id,
+                action: AUTH_AUDIT_ACTIONS.ACCOUNT_DELETED,
+                resourceType: "User",
+                resourceId: user.id,
+                payload: deletedUser,
+                ip: null,
+                userAgent: null,
+            })
+            return ServiceResponse.success<UserResponse>("User deleted successfully", deletedUser, StatusCodes.OK);
+        } catch (error) {
+            logger.error("Error deleting user:", error);
+            return ServiceResponse.failure("Error deleting user", null, StatusCodes.INTERNAL_SERVER_ERROR);
         }
     }
 }

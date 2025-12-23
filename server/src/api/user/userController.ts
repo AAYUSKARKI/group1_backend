@@ -1,6 +1,6 @@
 import { Request, RequestHandler, Response } from "express";
 import { ServiceResponse, handleServiceResponse } from "@/common/utils/serviceResponse";
-import { CreateUserSchema, LoginResponse, LoginUserSchema, UserResponse } from "./userModel";
+import { CreateUserSchema, LoginResponse, LoginUserSchema, UpdateUserSchema, UserResponse } from "./userModel";
 import { userService } from "./userService";
 import { StatusCodes } from "http-status-codes";
 
@@ -42,6 +42,28 @@ class UserController {
 
         const serviceResponse: ServiceResponse<null> = await userService.logoutUser(refreshToken,accessToken);
         return handleServiceResponse(serviceResponse, res);
+    }
+
+    public getUserById: RequestHandler = async (req:Request, res:Response) => {
+        const serviceResponse: ServiceResponse<UserResponse | null> = await userService.getUserById(req.params.id);
+        return handleServiceResponse(serviceResponse, res);
+    }
+
+    public getAllUsers: RequestHandler = async (req:Request, res: Response) => {
+        const serviceResponse: ServiceResponse<UserResponse[] | null> = await userService.getAllUsers();
+        return handleServiceResponse(serviceResponse, res);
+    }
+
+    public updateUser: RequestHandler = async (req:Request, res:Response) => {
+        const data = UpdateUserSchema.parse(req.body);
+        const serviceResponse: ServiceResponse<UserResponse | null> = await userService.updateUser(req.params.id,data);
+        return handleServiceResponse(serviceResponse,res);
+    }
+
+    public deleteUser: RequestHandler = async (req:Request, res:Response) => {
+        const serviceResponse: ServiceResponse<UserResponse | null> = await userService.deleteUser(req.params.id);
+        return handleServiceResponse(serviceResponse,res);
+
     }
 }
 
