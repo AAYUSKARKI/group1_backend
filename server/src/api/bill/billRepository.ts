@@ -1,4 +1,4 @@
-import { Prisma } from "@/generated/prisma/client";
+import { PaymentMode, Prisma } from "@/generated/prisma/client";
 import { BillResponse, CreateBill } from "./billModel";
 import { prisma } from "@/common/lib/prisma";
 
@@ -63,5 +63,9 @@ export class BillRepository {
 
     async findAll(): Promise<BillResponse[]> {
         return await prisma.bill.findMany({ include: { order: { include: { items: { include: { menuItem: true } } } } } });
+    }
+
+    async markAsPaid(id: string, paymentMode: PaymentMode): Promise<BillResponse> {
+        return await prisma.bill.update({ where: { id }, data: { isPaid: true, paymentMode }, include: { order: { include: { items: { include: { menuItem: true } } } } } });
     }
 }

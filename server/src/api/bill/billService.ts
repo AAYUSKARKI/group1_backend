@@ -1,7 +1,7 @@
 import { StatusCodes } from "http-status-codes";
 import { ServiceResponse } from "@/common/utils/serviceResponse";
 import { BillRepository } from "./billRepository";
-import { DiscountType } from "@/generated/prisma/enums";
+import { DiscountType, PaymentMode } from "@/generated/prisma/enums";
 import { OrderRepository } from "../order/orderRepository";
 import logger from "@/common/utils/logger";
 import { BillResponse, CreateBill } from "./billModel";
@@ -82,6 +82,27 @@ export class BillService {
         return ServiceResponse.success("Bills retrieved", bills);
     }
 
+    async confirmPayment(billId: string, paymentMode: PaymentMode, userId: string): Promise<ServiceResponse<BillResponse | null>> {
+        try {
+            const bill = await this.billRepository.findById(billId);
+            if (!bill) return ServiceResponse.failure("Bill not found", null, StatusCodes.NOT_FOUND);
+            if (bill.isPaid) return ServiceResponse.failure("Bill is already paid", null, StatusCodes.BAD_REQUEST);
+
+            const updatedBill = await this.billRepository.markAsPaid(billId, paymentMode);
+
+            await this.auditLogQueue.add("createAuditLog", {
+                userId,
+                action: BILL_AUDIT_ACTIONS.BILL_PAID,
+                resourceType: "Bill",
+                resourceId: billId,
+                payload: { paymentMode }
+            });
+
+            return ServiceResponse.success("Payment confirmed", updatedBill);
+        } catch (error) {
+            return ServiceResponse.failure("Error confirming payment", null, StatusCodes.INTERNAL_SERVER_ERROR);
+        }
+    }
 }
 
 export const billService = new BillService();

@@ -7,7 +7,7 @@ import { checkRole } from "@/common/middleware/verifyRole";
 import { billController } from "./billController";
 import { BillResponseSchema, billSchema, CreateBillSchema } from "./billModel";
 import { Role } from "@/generated/prisma/enums";
-
+import { PaymentMode } from "@/generated/prisma/enums";
 export const billRegistry = new OpenAPIRegistry();
 export const billRouter: Router = Router();
 
@@ -73,3 +73,44 @@ billRegistry.registerPath({
 });
 
 billRouter.get("/bill", verifyJWT, checkRole([Role.ADMIN, Role.CASHIER]), billController.getAllBills);
+
+billRegistry.registerPath({
+    method: "post",
+    path: "/api/bill/{id}/pay",
+    request: {
+        body: {
+            content: {
+                "application/json":
+                {
+                    schema: {
+                        type: "object",
+                        properties: {
+                            paymentMode: {
+                                type: "string",
+                                enum: Object.values(PaymentMode),
+                            },
+                        },
+                    }
+                }
+            }
+        }
+    },
+    parameters: [
+        {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: {
+                type: "string",
+            },
+            description: "ID of the bill to be paid",
+            example: "123e4567-e89b-12d3-a456-426655440000",
+        },
+    ],
+    summary: "Pay a bill",
+    tags: ["Bill"],
+    security: [{ bearerAuth: [] }],
+    responses: createApiResponse(BillResponseSchema, "Bill paid successfully", StatusCodes.OK),
+});
+
+billRouter.post("/bill/:id/pay", verifyJWT, checkRole([Role.ADMIN, Role.CASHIER]), billController.payBill);
