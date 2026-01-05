@@ -30,8 +30,9 @@ export const loginUser = createAsyncThunk(
   async (data, { rejectWithValue }) => {
     try {
       const response = await api.post("/user/login", data);
-      const { accessToken, user } = response.data.data;
+      const { accessToken,refreshToken, user } = response.data.data;
       localStorage.setItem("accessToken", accessToken);
+      localStorage.setItem("refreshToken", refreshToken);
       toast.success(response.data.message);
       return user;
     } catch (error) {
@@ -101,10 +102,11 @@ export const updateProfile = createAsyncThunk(
 
 export const logoutUser = createAsyncThunk(
   "auth/logout",
-  async (_, { rejectWithValue }) => {
+  async (refreshToken, { rejectWithValue }) => {
     try {
-      const response = await api.post("/user/logout");
+      const response = await api.post("/user/logout", { refreshToken });
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
       toast.success(response.data.message || "Logged out successfully");
     } catch (error) {
       const message = error.response?.data?.message || "Logout failed";
