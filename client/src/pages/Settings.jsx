@@ -10,6 +10,12 @@ import {
   Calendar,
   Settings,
   LogOut,
+  Building2,
+  Clock,
+  DollarSign,
+  Percent,
+  Bell,
+  Shield,
 } from "lucide-react";
 
 export default function SettingsPage() {
@@ -19,7 +25,7 @@ export default function SettingsPage() {
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     if (!token) {
-      navigate("/");
+      navigate("/login");
     }
   }, [navigate]);
 
@@ -36,7 +42,7 @@ export default function SettingsPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    navigate("/");
+    navigate("/login");
   };
 
   return (
@@ -96,18 +102,71 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-auto p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-3">
-            <Settings className="w-8 h-8" />
+            <Settings className="w-10 h-10 text-orange-600" />
             Settings
           </h1>
-          <p className="text-gray-600 mt-1">Configure restaurant settings</p>
+          <p className="text-gray-600 mt-2">Configure your restaurant operations</p>
         </div>
 
-        {/* Settings Card */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Restaurant Settings</h2>
-          <p className="text-gray-600 mb-4">Settings page coming soon</p>
-          <p className="text-gray-600">
-            Configure tax rates, service charges, operating hours, and more.
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Restaurant Info */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Building2 className="w-8 h-8 text-orange-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Restaurant Info</h2>
+            </div>
+            <p className="text-gray-600">Name, address, contact, logo — coming soon</p>
+          </div>
+
+          {/* Operating Hours */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Clock className="w-8 h-8 text-blue-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Operating Hours</h2>
+            </div>
+            <p className="text-gray-600">Set opening and closing times — coming soon</p>
+          </div>
+
+          {/* Tax & Charges */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <DollarSign className="w-8 h-8 text-green-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Tax & Service Charge</h2>
+            </div>
+            <p className="text-gray-600">Configure tax rates and service charges — coming soon</p>
+          </div>
+
+          {/* Notifications */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Bell className="w-8 h-8 text-purple-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Notifications</h2>
+            </div>
+            <p className="text-gray-600">Email/SMS alerts for reservations — coming soon</p>
+          </div>
+
+          {/* Security */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-8 h-8 text-red-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Security & Users</h2>
+            </div>
+            <p className="text-gray-600">Manage staff accounts and roles — coming soon</p>
+          </div>
+
+          {/* Backup */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Percent className="w-8 h-8 text-indigo-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Discounts & Offers</h2>
+            </div>
+            <p className="text-gray-600">Create promotions and discount rules — coming soon</p>
+          </div>
+        </div>
+
+        <div className="mt-8 p-6 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl border border-orange-200">
+          <p className="text-orange-800 font-medium">
+            Settings features are under development. They will be connected to the backend soon.
           </p>
         </div>
       </div>

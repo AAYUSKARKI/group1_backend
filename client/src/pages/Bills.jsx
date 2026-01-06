@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -17,49 +17,62 @@ import {
   Check,
   Download,
 } from "lucide-react";
-import { mockOrders, mockTables, mockBills } from "../lib/mock-data";
+import API from "../api/axios"; // Your configured API
 
 export default function BillsPage() {
   const location = useLocation();
-  const [bills, setBills] = useState(mockBills);
+
+  // Real tables from backend
+  const [tables, setTables] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Local bills (since no backend endpoint yet)
+  const [bills, setBills] = useState([]);
+
+  // Generate bill modal
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedOrder, setSelectedOrder] = useState("");
+  const [selectedTable, setSelectedTable] = useState("");
   const [discountValue, setDiscountValue] = useState(0);
   const [discountType, setDiscountType] = useState("PERCENTAGE");
   const [serviceCharge, setServiceCharge] = useState(2.0);
   const [taxPct, setTaxPct] = useState(13);
   const [paymentMode, setPaymentMode] = useState("CASH");
 
-  const menuItemsList = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
-    { name: "Tables", icon: TableIcon, path: "/tables" },
-    { name: "Menu", icon: MenuIcon, path: "/menu" },
-    { name: "POS", icon: ShoppingBag, path: "/pos" },
-    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
-    { name: "Bills", icon: Receipt, path: "/bills" },
-    { name: "Reservations", icon: Calendar, path: "/reservations" },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
+  useEffect(() => {
+    fetchTables();
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    window.location.href = "/";
+  const fetchTables = async () => {
+    try {
+      setLoading(true);
+      const response = await API.get("/api/table");
+      const tablesData = response.data?.data || response.data || [];
+      setTables(Array.isArray(tablesData) ? tablesData : []);
+    } catch (err) {
+      console.error("Error loading tables:", err);
+      alert("Failed to load tables");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const unbilledOrders = mockOrders.filter(
-    (o) => !bills.find((b) => b.orderId === o.id) && o.status === "READY"
-  );
-
   const generateBill = () => {
-    if (!selectedOrder) {
-      alert("Please select an order");
+    if (!selectedTable) {
+      alert("Please select a table");
       return;
     }
 
-    const order = mockOrders.find((o) => o.id === selectedOrder);
-    if (!order) return;
+    const table = tables.find((t) => t.id === selectedTable);
+    if (!table) return;
 
-    const subTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    // Mock order items for demo (replace with real order when POS ready)
+    const mockOrderItems = [
+      { name: "Burger", price: 12.99, quantity: 2 },
+      { name: "Fries", price: 4.99, quantity: 1 },
+      { name: "Coke", price: 2.99, quantity: 2 },
+    ];
+
+    const subTotal = mockOrderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     const discountAmount =
       discountType === "PERCENTAGE"
@@ -71,9 +84,11 @@ export default function BillsPage() {
     const grandTotal = afterDiscount + taxAmount + serviceCharge;
 
     const newBill = {
-      id: (bills.length + 1).toString(),
-      orderId: selectedOrder,
+      id: Date.now().toString(),
+      tableId: selectedTable,
+      tableName: `Table ${table.tableNumber || table.number || table.id.slice(0, 8)}`,
       generatedAt: new Date(),
+      items: mockOrderItems,
       subTotal,
       discountValue,
       discountType,
@@ -88,9 +103,17 @@ export default function BillsPage() {
 
     setBills([...bills, newBill]);
     setIsDialogOpen(false);
-    setSelectedOrder("");
-    setDiscountValue(0);
+    resetForm();
     alert("Bill generated successfully!");
+  };
+
+  const resetForm = () => {
+    setSelectedTable("");
+    setDiscountValue(0);
+    setDiscountType("PERCENTAGE");
+    setServiceCharge(2.0);
+    setTaxPct(13);
+    setPaymentMode("CASH");
   };
 
   const markAsPaid = (billId) => {
@@ -108,6 +131,30 @@ export default function BillsPage() {
 
   const pendingBills = bills.filter((b) => !b.isPaid);
 
+  const sidebarItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
+    { name: "Tables", icon: TableIcon, path: "/tables" },
+    { name: "Menu", icon: MenuIcon, path: "/menu" },
+    { name: "POS", icon: ShoppingBag, path: "/pos" },
+    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
+    { name: "Bills", icon: Receipt, path: "/bills" },
+    { name: "Reservations", icon: Calendar, path: "/reservations" },
+    { name: "Settings", icon: Settings, path: "/settings" },
+  ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    window.location.href = "/login";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <p className="text-2xl text-gray-600">Loading bills...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -123,13 +170,11 @@ export default function BillsPage() {
 
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {menuItemsList.map((item) => (
+            {sidebarItems.map((item) => (
               <li
                 key={item.name}
                 className={`rounded-lg transition ${
-                  location.pathname === item.path
-                    ? "bg-gray-800 font-medium"
-                    : "hover:bg-gray-800"
+                  location.pathname === item.path ? "bg-gray-800 font-medium" : "hover:bg-gray-800"
                 }`}
               >
                 <Link to={item.path} className="flex items-center gap-3 px-4 py-3">
@@ -210,30 +255,29 @@ export default function BillsPage() {
           </div>
         </div>
 
-        {/* Generate Bill Dialog (Simple Modal) */}
+        {/* Generate Bill Dialog */}
         {isDialogOpen && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-2xl">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Generate Bill</h2>
-              <p className="text-gray-600 mb-6">Create a new bill for an order</p>
+              <p className="text-gray-600 mb-6">Create a new bill for a table</p>
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Order</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Table</label>
                   <select
-                    value={selectedOrder}
-                    onChange={(e) => setSelectedOrder(e.target.value)}
+                    value={selectedTable}
+                    onChange={(e) => setSelectedTable(e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
                   >
-                    <option value="">Choose an order</option>
-                    {unbilledOrders.map((order) => {
-                      const table = mockTables.find((t) => t.id === order.tableId);
-                      return (
-                        <option key={order.id} value={order.id}>
-                          {table?.name} - {order.placedBy}
+                    <option value="">Choose a table</option>
+                    {tables
+                      .filter((t) => t.status === "OCCUPIED") // Only occupied tables
+                      .map((table) => (
+                        <option key={table.id} value={table.id}>
+                          Table {table.tableNumber || table.number || table.id.slice(0, 8)} ({table.seats} seats)
                         </option>
-                      );
-                    })}
+                      ))}
                   </select>
                 </div>
 
@@ -301,7 +345,10 @@ export default function BillsPage() {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    resetForm();
+                  }}
                   className="px-6 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50"
                 >
                   Cancel
@@ -321,14 +368,17 @@ export default function BillsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">All Bills</h2>
-            <p className="text-sm text-gray-600 mt-1">View and manage all bills</p>
+            <p className="text-sm text-gray-600 mt-1">View and manage all bills (demo mode - local only)</p>
           </div>
           <div className="p-6 space-y-4">
-            {bills.map((bill) => {
-              const order = mockOrders.find((o) => o.id === bill.orderId);
-              const table = mockTables.find((t) => t.id === order?.tableId);
-
-              return (
+            {bills.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">No bills generated yet</p>
+                <p className="text-sm text-gray-400 mt-1">Generate a bill for an occupied table</p>
+              </div>
+            ) : (
+              bills.map((bill) => (
                 <div
                   key={bill.id}
                   className="flex items-center justify-between p-6 bg-gray-50 rounded-lg border border-gray-200"
@@ -339,10 +389,10 @@ export default function BillsPage() {
                     </div>
                     <div>
                       <p className="font-semibold text-gray-900">
-                        {table?.name} - {order?.placedBy}
+                        {bill.tableName}
                       </p>
                       <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                        <span>Bill #{bill.id}</span>
+                        <span>Bill #{bill.id.slice(-6)}</span>
                         <span>{new Date(bill.generatedAt).toLocaleString()}</span>
                         <span className="flex items-center gap-1">
                           {bill.paymentMode === "CASH" ? (
@@ -387,8 +437,8 @@ export default function BillsPage() {
                     )}
                   </div>
                 </div>
-              );
-            })}
+              ))
+            )}
           </div>
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -17,11 +17,16 @@ import {
   CheckCircle2,
   X,
 } from "lucide-react";
-import { mockReservations, mockTables } from "../lib/mock-data";
+import API from "../api/axios"; // Your configured API
 
 export default function ReservationsPage() {
   const location = useLocation();
-  const [reservations, setReservations] = useState(mockReservations);
+
+  const [tables, setTables] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // New reservation modal
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [newReservation, setNewReservation] = useState({
     tableId: "",
@@ -32,56 +37,81 @@ export default function ReservationsPage() {
     durationMin: 120,
   });
 
-  const menuItemsList = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
-    { name: "Tables", icon: TableIcon, path: "/tables" },
-    { name: "Menu", icon: MenuIcon, path: "/menu" },
-    { name: "POS", icon: ShoppingBag, path: "/pos" },
-    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
-    { name: "Bills", icon: Receipt, path: "/bills" },
-    { name: "Reservations", icon: Calendar, path: "/reservations" },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    window.location.href = "/";
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      const [tablesRes, reservationsRes] = await Promise.all([
+        API.get("/api/table"),
+        API.get("/api/reservation"),
+      ]);
+
+      const tablesData = tablesRes.data?.data || tablesRes.data || [];
+      const reservationsData = reservationsRes.data?.data || reservationsRes.data || [];
+
+      setTables(Array.isArray(tablesData) ? tablesData : []);
+      setReservations(Array.isArray(reservationsData) ? reservationsData : []);
+    } catch (err) {
+      console.error("Error loading reservations data:", err);
+      alert("Failed to load tables or reservations");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const updateStatus = (id, status) => {
-    setReservations(
-      reservations.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-  };
-
-  const addReservation = () => {
+  const addReservation = async () => {
     if (!newReservation.tableId || !newReservation.guestName || !newReservation.reservedAt) {
       alert("Please fill all required fields");
       return;
     }
 
-    const reservedAt = new Date(newReservation.reservedAt);
-    const reservedUntil = new Date(reservedAt.getTime() + newReservation.durationMin * 60000);
+    try {
+      const payload = {
+        tableId: newReservation.tableId,
+        guestName: newReservation.guestName,
+        guestPhone: newReservation.guestPhone || null,
+        guests: newReservation.guests,
+        reservedAt: newReservation.reservedAt,
+        durationMin: newReservation.durationMin,
+      };
 
-    const reservation = {
-      id: (reservations.length + 1).toString(),
-      ...newReservation,
-      reservedAt,
-      reservedUntil,
-      status: "ACTIVE",
-    };
+      await API.post("/api/reservation", payload);
 
-    setReservations([...reservations, reservation]);
-    setIsDialogOpen(false);
-    setNewReservation({
-      tableId: "",
-      guestName: "",
-      guestPhone: "",
-      guests: 2,
-      reservedAt: "",
-      durationMin: 120,
-    });
-    alert("Reservation created successfully!");
+      // Reset and refresh
+      setIsDialogOpen(false);
+      setNewReservation({
+        tableId: "",
+        guestName: "",
+        guestPhone: "",
+        guests: 2,
+        reservedAt: "",
+        durationMin: 120,
+      });
+
+      fetchData(); // Reload reservations
+      alert("Reservation created successfully!");
+    } catch (err) {
+      console.error("Error creating reservation:", err);
+      alert(err.response?.data?.message || "Failed to create reservation");
+    }
+  };
+
+  const updateStatus = async (id, status) => {
+    try {
+      // TODO: Add PATCH endpoint when backend supports
+      // await API.patch(`/api/reservation/${id}`, { status });
+
+      // For now, update locally
+      setReservations(
+        reservations.map((r) => (r.id === id ? { ...r, status } : r))
+      );
+    } catch (err) {
+      alert("Status update failed");
+    }
   };
 
   const formatDateTime = (date) => {
@@ -98,6 +128,30 @@ export default function ReservationsPage() {
     (r) => new Date(r.reservedAt).toDateString() === today
   );
 
+  const sidebarItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
+    { name: "Tables", icon: TableIcon, path: "/tables" },
+    { name: "Menu", icon: MenuIcon, path: "/menu" },
+    { name: "POS", icon: ShoppingBag, path: "/pos" },
+    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
+    { name: "Bills", icon: Receipt, path: "/bills" },
+    { name: "Reservations", icon: Calendar, path: "/reservations" },
+    { name: "Settings", icon: Settings, path: "/settings" },
+  ];
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    window.location.href="/login";
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <p className="text-2xl text-gray-600">Loading reservations...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -113,13 +167,11 @@ export default function ReservationsPage() {
 
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {menuItemsList.map((item) => (
+            {sidebarItems.map((item) => (
               <li
                 key={item.name}
                 className={`rounded-lg transition ${
-                  location.pathname === item.path
-                    ? "bg-gray-800 font-medium"
-                    : "hover:bg-gray-800"
+                  location.pathname === item.path ? "bg-gray-800 font-medium" : "hover:bg-gray-800"
                 }`}
               >
                 <Link to={item.path} className="flex items-center gap-3 px-4 py-3">
@@ -194,7 +246,7 @@ export default function ReservationsPage() {
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Guests</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {activeReservations.reduce((sum, r) => sum + r.guests, 0)}
+                  {activeReservations.reduce((sum, r) => sum + (r.guests || 0), 0)}
                 </p>
               </div>
               <Users className="w-8 h-8 text-blue-600" />
@@ -207,17 +259,16 @@ export default function ReservationsPage() {
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
               <h2 className="text-2xl font-bold text-gray-900 mb-4">Create New Reservation</h2>
-              <p className="text-gray-600 mb-6">Add a new table reservation</p>
 
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Guest Name *</label>
                   <input
                     type="text"
-                    placeholder="John Smith"
                     value={newReservation.guestName}
                     onChange={(e) => setNewReservation({ ...newReservation, guestName: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
+                    required
                   />
                 </div>
 
@@ -225,7 +276,6 @@ export default function ReservationsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
                   <input
                     type="text"
-                    placeholder="+1-555-0123"
                     value={newReservation.guestPhone}
                     onChange={(e) => setNewReservation({ ...newReservation, guestPhone: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
@@ -251,11 +301,13 @@ export default function ReservationsPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                     >
                       <option value="">Select table</option>
-                      {mockTables.map((table) => (
-                        <option key={table.id} value={table.id}>
-                          {table.name} ({table.seats} seats)
-                        </option>
-                      ))}
+                      {tables
+                        .filter((t) => t.status === "AVAILABLE")
+                        .map((table) => (
+                          <option key={table.id} value={table.id}>
+                            Table {table.tableNumber || table.number || table.id.slice(0, 8)} ({table.seats} seats)
+                          </option>
+                        ))}
                     </select>
                   </div>
                 </div>
@@ -267,27 +319,38 @@ export default function ReservationsPage() {
                     value={newReservation.reservedAt}
                     onChange={(e) => setNewReservation({ ...newReservation, reservedAt: e.target.value })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
                   <select
                     value={newReservation.durationMin}
                     onChange={(e) => setNewReservation({ ...newReservation, durationMin: Number(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                   >
-                    <option value="60">60 minutes</option>
-                    <option value="90">90 minutes</option>
-                    <option value="120">120 minutes</option>
-                    <option value="180">180 minutes</option>
+                    <option value="60">1 hour</option>
+                    <option value="90">1.5 hours</option>
+                    <option value="120">2 hours</option>
+                    <option value="180">3 hours</option>
                   </select>
                 </div>
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setIsDialogOpen(false)}
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    setNewReservation({
+                      tableId: "",
+                      guestName: "",
+                      guestPhone: "",
+                      guests: 2,
+                      reservedAt: "",
+                      durationMin: 120,
+                    });
+                  }}
                   className="px-6 py-2 border border-gray-300 rounded-lg font-medium hover:bg-gray-50"
                 >
                   Cancel
@@ -307,17 +370,17 @@ export default function ReservationsPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
             <h2 className="text-xl font-semibold text-gray-900">All Reservations</h2>
-            <p className="text-sm text-gray-600 mt-1">Manage and track table reservations</p>
+            <p className="text-sm text-gray-600 mt-1">View and manage reservations</p>
           </div>
           <div className="p-6 space-y-4">
             {reservations.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">No reservations yet</p>
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-500 font-medium">No reservations yet</p>
+              </div>
             ) : (
               reservations.map((reservation) => {
-                const table = mockTables.find((t) => t.id === reservation.tableId);
-
-                // Safe table number extraction
-                const tableNumber = table && table.name ? table.name.split(" ")[1] || "?" : "?";
+                const table = tables.find((t) => t.id === reservation.tableId);
 
                 return (
                   <div
@@ -326,14 +389,14 @@ export default function ReservationsPage() {
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold">
-                        {tableNumber}
+                        {table?.tableNumber || table?.number || "?"}
                       </div>
                       <div>
                         <p className="font-semibold text-gray-900">{reservation.guestName}</p>
                         <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
                           <span className="flex items-center gap-1">
                             <Users className="w-4 h-4" />
-                            {reservation.guests} guests
+                            {reservation.guests || "?"} guests
                           </span>
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
@@ -361,7 +424,7 @@ export default function ReservationsPage() {
                             : "bg-gray-100 text-gray-700"
                         }`}
                       >
-                        {reservation.status}
+                        {reservation.status || "UNKNOWN"}
                       </span>
 
                       {reservation.status === "ACTIVE" && (
@@ -369,12 +432,14 @@ export default function ReservationsPage() {
                           <button
                             onClick={() => updateStatus(reservation.id, "COMPLETED")}
                             className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                            title="Mark as completed"
                           >
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => updateStatus(reservation.id, "CANCELLED")}
                             className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            title="Cancel"
                           >
                             <X className="w-4 h-4" />
                           </button>

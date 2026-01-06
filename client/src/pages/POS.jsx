@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -18,26 +18,44 @@ import {
   ShoppingCart,
   Send,
 } from "lucide-react";
-import { mockTables, mockMenuItems } from "../lib/mock-data";
+import API from "../api/axios"; // ← Your configured API with token
 
 export default function POSPage() {
   const location = useLocation();
+
   const [selectedTable, setSelectedTable] = useState("");
   const [cart, setCart] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [tables] = useState(mockTables);
-  const [menuItems] = useState(mockMenuItems);
+  const [tables, setTables] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const menuItemsList = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
-    { name: "Tables", icon: TableIcon, path: "/tables" },
-    { name: "Menu", icon: MenuIcon, path: "/menu" },
-    { name: "POS", icon: ShoppingBag, path: "/pos" },
-    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
-    { name: "Bills", icon: Receipt, path: "/bills" },
-    { name: "Reservations", icon: Calendar, path: "/reservations" },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
+  // Fetch real data from backend
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        const [tablesRes, menuRes] = await Promise.all([
+          API.get("/api/table"),
+          API.get("/api/menu-item"),
+        ]);
+
+        const tablesData = tablesRes.data?.data || tablesRes.data || [];
+        const menuData = menuRes.data?.data || menuRes.data || [];
+
+        setTables(Array.isArray(tablesData) ? tablesData : []);
+        setMenuItems(Array.isArray(menuData) ? menuData : []);
+      } catch (err) {
+        console.error("Error loading POS data:", err);
+        alert("Failed to load tables or menu items");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const addToCart = (item) => {
     const existing = cart.find((c) => c.id === item.id);
@@ -65,17 +83,54 @@ export default function POSPage() {
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const tax = subtotal * 0.13;
+  const tax = subtotal * 0.13; // 13% tax
   const total = subtotal + tax;
 
-  const filteredItems = menuItems.filter((item) => {
-    return item.name.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredItems = menuItems.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    window.location.href = "/";
+    window.location.href = "/login";
   };
+
+  const handlePlaceOrder = () => {
+    if (!selectedTable) {
+      alert("Please select a table");
+      return;
+    }
+    if (cart.length === 0) {
+      alert("Cart is empty");
+      return;
+    }
+
+    // TODO: Send order to backend when endpoint is ready
+    alert(`Order placed for Table ${tables.find(t => t.id === selectedTable)?.tableNumber}!\nTotal: $${total.toFixed(2)}`);
+
+    // Clear cart after order
+    clearCart();
+    setSelectedTable("");
+  };
+
+  const sidebarItems = [
+    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
+    { name: "Tables", icon: TableIcon, path: "/tables" },
+    { name: "Menu", icon: MenuIcon, path: "/menu" },
+    { name: "POS", icon: ShoppingBag, path: "/pos" },
+    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
+    { name: "Bills", icon: Receipt, path: "/bills" },
+    { name: "Reservations", icon: Calendar, path: "/reservations" },
+    { name: "Settings", icon: Settings, path: "/settings" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <p className="text-2xl text-gray-600">Loading POS system...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -92,7 +147,7 @@ export default function POSPage() {
 
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {menuItemsList.map((item) => (
+            {sidebarItems.map((item) => (
               <li
                 key={item.name}
                 className={`rounded-lg transition ${
@@ -151,11 +206,13 @@ export default function POSPage() {
               className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-orange-500"
             >
               <option value="">Select table</option>
-              {tables.map((table) => (
-                <option key={table.id} value={table.id}>
-                  Table {table.tableNumber} ({table.seats} seats)
-                </option>
-              ))}
+              {tables
+                .filter((t) => t.status === "AVAILABLE") // Only show available tables
+                .map((table) => (
+                  <option key={table.id} value={table.id}>
+                    Table {table.tableNumber || table.number || table.id.slice(0, 8)} ({table.seats} seats)
+                  </option>
+                ))}
             </select>
           </div>
 
@@ -167,9 +224,10 @@ export default function POSPage() {
                 className="bg-white rounded-xl shadow-sm border border-gray-200 cursor-pointer hover:shadow-md transition"
               >
                 <img
-                  src={item.imageUrl}
+                  src={item.imageUrl || "https://via.placeholder.com/400x300?text=No+Image"}
                   alt={item.name}
                   className="w-full h-48 object-cover rounded-t-xl"
+                  onError={(e) => (e.target.src = "https://via.placeholder.com/400x300?text=No+Image")}
                 />
                 <div className="p-4">
                   <div className="flex justify-between items-start mb-2">
@@ -177,9 +235,13 @@ export default function POSPage() {
                       {item.name}
                       {item.isVeg && <Leaf className="w-4 h-4 text-green-600" />}
                     </h3>
-                    <p className="text-xl font-bold text-orange-600">${item.price.toFixed(2)}</p>
+                    <p className="text-xl font-bold text-orange-600">
+                      ${Number(item.price || 0).toFixed(2)}
+                    </p>
                   </div>
-                  <p className="text-sm text-gray-600">{item.description}</p>
+                  <p className="text-sm text-gray-600">
+                    {item.description || "No description"}
+                  </p>
                 </div>
               </div>
             ))}
@@ -195,7 +257,7 @@ export default function POSPage() {
             </h2>
             {selectedTable && (
               <p className="text-sm text-gray-600 mt-1">
-                Table {tables.find((t) => t.id === selectedTable)?.tableNumber}
+                Table {tables.find((t) => t.id === selectedTable)?.tableNumber || "Selected"}
               </p>
             )}
           </div>
@@ -217,7 +279,7 @@ export default function POSPage() {
                           {item.name}
                           {item.isVeg && <Leaf className="w-4 h-4 text-green-600" />}
                         </p>
-                        <p className="text-sm text-gray-600">${item.price.toFixed(2)} each</p>
+                        <p className="text-sm text-gray-600">${Number(item.price).toFixed(2)} each</p>
                       </div>
                       <button
                         onClick={() => removeFromCart(item.id)}
@@ -233,12 +295,7 @@ export default function POSPage() {
                       >
                         <Minus className="w-4 h-4" />
                       </button>
-                      <input
-                        type="number"
-                        value={item.qty}
-                        onChange={(e) => updateQuantity(item.id, Number(e.target.value) || 1)}
-                        className="w-16 text-center border border-gray-300 rounded px-2 py-1"
-                      />
+                      <span className="w-16 text-center font-medium">{item.qty}</span>
                       <button
                         onClick={() => updateQuantity(item.id, item.qty + 1)}
                         className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center"
@@ -279,9 +336,9 @@ export default function POSPage() {
                 Clear
               </button>
               <button
-                onClick={() => alert("Order placed!")}
+                onClick={handlePlaceOrder}
                 disabled={cart.length === 0 || !selectedTable}
-                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium flex items-center justify-center gap-2 disabled:opacity-50 transition"
               >
                 <Send className="w-5 h-5" />
                 Place Order

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,50 +14,82 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import { mockOrders, mockTables, mockMenuItems } from "../lib/mock-data";
+import API from "../api/axios"; // Your configured API
 
 export default function KitchenPage() {
   const location = useLocation();
-  const [orders, setOrders] = useState(mockOrders);
+
+  const [orders, setOrders] = useState([]);
+  const [tables, setTables] = useState([]);
+  const [menuItems, setMenuItems] = useState([]);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    fetchData();
+
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      const [ordersRes, tablesRes, menuRes] = await Promise.all([
+        API.get("/api/order"), // or "/api/orders" if different
+        API.get("/api/table"),
+        API.get("/api/menu-item"),
+      ]);
+
+      const ordersData = ordersRes.data?.data || ordersRes.data || [];
+      const tablesData = tablesRes.data?.data || tablesRes.data || [];
+      const menuData = menuRes.data?.data || menuRes.data || [];
+
+      setOrders(Array.isArray(ordersData) ? ordersData : []);
+      setTables(Array.isArray(tablesData) ? tablesData : []);
+      setMenuItems(Array.isArray(menuData) ? menuData : []);
+    } catch (err) {
+      console.error("Error loading kitchen data:", err);
+      alert("Failed to load orders, tables, or menu items");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const updateOrderStatus = (orderId, status) => {
     setOrders(orders.map((o) => (o.id === orderId ? { ...o, status } : o)));
 
     const order = orders.find((o) => o.id === orderId);
-    const table = mockTables.find((t) => t.id === order?.tableId);
+    const table = tables.find((t) => t.id === order?.tableId);
+
+    const tableName = table?.tableNumber || table?.number || "Unknown";
 
     if (status === "PREPARING") {
-      alert(`Preparing order for ${table?.name}`);
+      alert(`Preparing order for Table ${tableName}`);
     } else if (status === "READY") {
-      alert(`${table?.name} order is ready to serve`);
+      alert(`Table ${tableName} order is ready to serve`);
     } else if (status === "CANCELLED") {
-      alert(`${table?.name} order has been cancelled`);
+      alert(`Table ${tableName} order has been cancelled`);
     } else if (status === "SERVED") {
-      alert(`${table?.name} order marked as served`);
+      alert(`Table ${tableName} order marked as served`);
     }
   };
 
   const getTimeElapsed = (orderTime) => {
-  if (!orderTime || !(orderTime instanceof Date)) {
-    return 0;
-  }
-  const diff = Math.floor((currentTime.getTime() - orderTime.getTime()) / 1000 / 60);
-  return Math.max(diff, 0); // prevent negative
-
+    if (!orderTime) return 0;
+    const orderDate = new Date(orderTime);
+    if (isNaN(orderDate.getTime())) return 0;
+    const diff = Math.floor((currentTime.getTime() - orderDate.getTime()) / 1000 / 60);
+    return Math.max(diff, 0);
   };
 
   const activeOrders = orders.filter((o) => o.status !== "SERVED" && o.status !== "CANCELLED");
-  const pendingOrders = activeOrders.filter((o) => o.status === "PENDING");
+  const pendingOrders = activeOrders.filter((o) => o.status === "PENDING" || o.status === "NEW");
   const preparingOrders = activeOrders.filter((o) => o.status === "PREPARING");
   const readyOrders = activeOrders.filter((o) => o.status === "READY");
 
-  const menuItemsList = [
+  const sidebarItems = [
     { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
     { name: "Tables", icon: TableIcon, path: "/tables" },
     { name: "Menu", icon: MenuIcon, path: "/menu" },
@@ -70,8 +102,16 @@ export default function KitchenPage() {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
-    window.location.href = "/";
+    window.location.href = "/login";
   };
+
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-100">
+        <p className="text-2xl text-gray-600">Loading kitchen orders...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -88,13 +128,11 @@ export default function KitchenPage() {
 
         <nav className="flex-1 p-4">
           <ul className="space-y-1">
-            {menuItemsList.map((item) => (
+            {sidebarItems.map((item) => (
               <li
                 key={item.name}
                 className={`rounded-lg transition ${
-                  location.pathname === item.path
-                    ? "bg-gray-800 font-medium"
-                    : "hover:bg-gray-800"
+                  location.pathname === item.path ? "bg-gray-800 font-medium" : "hover:bg-gray-800"
                 }`}
               >
                 <Link to={item.path} className="flex items-center gap-3 px-4 py-3">
@@ -160,9 +198,11 @@ export default function KitchenPage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {pendingOrders.map((order) => {
-                  const table = mockTables.find((t) => t.id === order.tableId);
-                  const timeElapsed = getTimeElapsed(order.createdAt);
+                  const table = tables.find((t) => t.id === order.tableId);
+                  const timeElapsed = getTimeElapsed(order.createdAt || order.placedAt);
                   const isUrgent = timeElapsed > 15;
+
+                  const tableNumber = table?.tableNumber || table?.number || "?";
 
                   return (
                     <div
@@ -174,11 +214,11 @@ export default function KitchenPage() {
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-lg">
-                            {table ? table.name.split(" ")[1] : "?"}
+                            #{tableNumber}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{table?.name || "Unknown Table"}</p>
-                            <p className="text-sm text-gray-600">{order.placedBy}</p>
+                            <p className="font-bold text-gray-900">Table {tableNumber}</p>
+                            <p className="text-sm text-gray-600">Order #{order.id}</p>
                           </div>
                         </div>
                         <div className="text-right">
@@ -202,15 +242,17 @@ export default function KitchenPage() {
                       )}
 
                       <div className="space-y-2 mb-4">
-                        {order.items.map((item) => {
-                          const menuItem = mockMenuItems.find((m) => m.id === item.menuItemId);
+                        {(order.items || []).map((item, index) => {
+                          const menuItem = menuItems.find((m) => m.id === item.menuItemId || m.id === item.id);
                           return (
-                            <div key={item.menuItemId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                               <div className="flex items-center gap-3">
                                 <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                                  {item.quantity}
+                                  {item.quantity || item.qty || 1}
                                 </div>
-                                <p className="font-medium text-gray-900">{menuItem?.name || "Unknown Item"}</p>
+                                <p className="font-medium text-gray-900">
+                                  {menuItem?.name || "Unknown Item"}
+                                </p>
                               </div>
                             </div>
                           );
@@ -241,29 +283,24 @@ export default function KitchenPage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {preparingOrders.map((order) => {
-                  const table = mockTables.find((t) => t.id === order.tableId);
-                  const timeElapsed = getTimeElapsed(order.createdAt);
-                  const isUrgent = timeElapsed > 15;
+                  const table = tables.find((t) => t.id === order.tableId);
+                  const timeElapsed = getTimeElapsed(order.createdAt || order.placedAt);
+                  const tableNumber = table?.tableNumber || table?.number || "?";
 
                   return (
-                    <div
-                      key={order.id}
-                      className={`bg-white rounded-xl shadow-sm border-2 ${
-                        isUrgent ? "border-red-500" : "border-gray-200"
-                      } p-6`}
-                    >
+                    <div key={order.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-lg">
-                            {table ? table.name.split(" ")[1] : "?"}
+                            #{tableNumber}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{table?.name || "Unknown Table"}</p>
-                            <p className="text-sm text-gray-600">{order.placedBy}</p>
+                            <p className="font-bold text-gray-900">Table {tableNumber}</p>
+                            <p className="text-sm text-gray-600">Order #{order.id}</p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <div className={`flex items-center gap-1 ${isUrgent ? "text-red-600" : "text-gray-600"}`}>
+                          <div className="flex items-center gap-1 text-gray-600">
                             <Clock className="w-4 h-4" />
                             <span className="font-semibold">{timeElapsed}m</span>
                           </div>
@@ -271,18 +308,21 @@ export default function KitchenPage() {
                       </div>
 
                       <div className="space-y-2 mb-4">
-                        {order.items.map((item) => (
-                          <div key={item.menuItemId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                                {item.quantity}
+                        {(order.items || []).map((item, index) => {
+                          const menuItem = menuItems.find((m) => m.id === item.menuItemId || m.id === item.id);
+                          return (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                  {item.quantity || item.qty || 1}
+                                </div>
+                                <p className="font-medium text-gray-900">
+                                  {menuItem?.name || "Unknown Item"}
+                                </p>
                               </div>
-                              <p className="font-medium text-gray-900">
-                                {mockMenuItems.find((m) => m.id === item.menuItemId)?.name || "Unknown"}
-                              </p>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <div className="flex gap-2">
@@ -318,35 +358,39 @@ export default function KitchenPage() {
               </div>
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {readyOrders.map((order) => {
-                  const table = mockTables.find((t) => t.id === order.tableId);
+                  const table = tables.find((t) => t.id === order.tableId);
+                  const tableNumber = table?.tableNumber || table?.number || "?";
 
                   return (
                     <div key={order.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6">
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-orange-600 font-bold text-lg">
-                            {table ? table.name.split(" ")[1] : "?"}
+                            #{tableNumber}
                           </div>
                           <div>
-                            <p className="font-bold text-gray-900">{table?.name || "Unknown Table"}</p>
-                            <p className="text-sm text-gray-600">{order.placedBy}</p>
+                            <p className="font-bold text-gray-900">Table {tableNumber}</p>
+                            <p className="text-sm text-gray-600">Order #{order.id}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="space-y-2 mb-4">
-                        {order.items.map((item) => (
-                          <div key={item.menuItemId} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                                {item.quantity}
+                        {(order.items || []).map((item, index) => {
+                          const menuItem = menuItems.find((m) => m.id === item.menuItemId || m.id === item.id);
+                          return (
+                            <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-bold text-sm">
+                                  {item.quantity || item.qty || 1}
+                                </div>
+                                <p className="font-medium text-gray-900">
+                                  {menuItem?.name || "Unknown Item"}
+                                </p>
                               </div>
-                              <p className="font-medium text-gray-900">
-                                {mockMenuItems.find((m) => m.id === item.menuItemId)?.name || "Unknown"}
-                              </p>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       <button
@@ -367,7 +411,7 @@ export default function KitchenPage() {
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200">
               <ChefHat className="w-20 h-20 text-gray-400 mb-4" />
               <p className="text-2xl font-semibold text-gray-900 mb-2">No active orders</p>
-              <p className="text-gray-600">New orders will appear here</p>
+              <p className="text-gray-600">New orders from POS will appear here</p>
             </div>
           )}
         </div>
