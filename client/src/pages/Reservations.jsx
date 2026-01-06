@@ -44,7 +44,7 @@ export default function ReservationsPage() {
     dispatch(fetchTables())
   }, [dispatch])
 
-  const addReservation = () => {
+  const addReservation = async () => {
     if (!newReservation.tableId || !newReservation.guestName || !newReservation.reservedAt) {
       return
     }
