@@ -16,8 +16,10 @@ import AddStaff from './pages/AddStaff';
 import ManageStaff from './pages/Staff';
 import HealthDashboard from './pages/Health';
 import AuditLogPage from './pages/AuditLogs';
-
+import { updateThemeClass } from './store/themeSlice';
 function App() {
+  const savedTheme = localStorage.getItem("ui-theme") || "system";
+updateThemeClass(savedTheme);
   return (
     <Router>
       <Routes>
