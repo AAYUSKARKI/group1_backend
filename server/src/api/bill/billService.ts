@@ -65,7 +65,7 @@ export class BillService {
                 userAgent: null,
             });
 
-            return ServiceResponse.success<BillResponse>("Bill created successfully", bill, StatusCodes.CREATED);
+            return ServiceResponse.success<BillResponse>("Bill created successfully", updatedBill, StatusCodes.CREATED);
 
         } catch (error) {
             logger.error("Error creating Bill:", error);

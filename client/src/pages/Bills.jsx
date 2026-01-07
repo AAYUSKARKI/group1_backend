@@ -36,7 +36,7 @@ export default function BillsPage() {
         taxPct: 13,
         paymentMode: "CASH",
     })
-    const unbilledOrders = orders.filter((o) => !bills.find((b) => b.orderId === o.id) && o.status === "READY")
+    const unbilledOrders = orders.filter((o) => !bills.find((b) => b.orderId === o.id) && o.status === "SERVED")
 
     useEffect(() => {
         dispatch(fetchBills())
