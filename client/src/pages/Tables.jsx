@@ -1,186 +1,396 @@
-import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react"
+import { Sidebar } from "@/components/Sidebar"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Users, Clock, Sparkles, AlertCircle, QrCode, ExternalLink } from "lucide-react"
 import {
-  LayoutDashboard,
-  Table as TableIcon,
-  Menu as MenuIcon,
-  ShoppingBag,
-  ChefHat,
-  Receipt,
-  Calendar,
-  Settings,
-  LogOut,
-  Sparkles,
-  Users,
-  Clock,
-  AlertCircle,
-} from "lucide-react";
-import { mockTables } from "../lib/mock-data";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { fetchTables, fetchTable, assignWaiter, updateTableStatus, createTable, updateTable, deleteTable } from "@/store/tableSlice"
+import { useDispatch, useSelector } from "react-redux"
+import { API } from "@/api/axios"
+import toast from "react-hot-toast"
 
-export default function TablesPage() {
-  const location = useLocation();
-  const [tables] = useState(mockTables);
+function TableItem({ table, waiters, getStatusColor, getStatusIcon, showQRCode, copyUrl }) {
+  const dispatch = useDispatch()
+  const assignedWaiter = waiters.find((w) => w.id === table.assignedTo)
+  const [editedName, setEditedName] = useState(table.name)
+  const [editedSeats, setEditedSeats] = useState(table.seats.toString())
 
-  const menuItems = [
-    { name: "Dashboard", icon: LayoutDashboard, path: "/admin-dashboard" },
-    { name: "Tables", icon: TableIcon, path: "/tables" },
-    { name: "Menu", icon: MenuIcon, path: "/menu" },
-    { name: "POS", icon: ShoppingBag, path: "/pos" },
-    { name: "Kitchen", icon: ChefHat, path: "/kitchen" },
-    { name: "Bills", icon: Receipt, path: "/bills" },
-    { name: "Reservations", icon: Calendar, path: "/reservations" },
-    { name: "Settings", icon: Settings, path: "/settings" },
-  ];
-
-  const statusCounts = {
-    available: tables.filter(t => t.status === "AVAILABLE").length,
-    occupied: tables.filter(t => t.status === "OCCUPIED").length,
-    reserved: tables.filter(t => t.status === "RESERVED").length,
-    needsCleaning: tables.filter(t => t.status === "NEEDS_CLEANING").length,
+  const handleUpdateTableStatus = (status) => {
+    dispatch(updateTableStatus({ id: table.id, status }))
+    dispatch(fetchTables())
   };
 
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case "AVAILABLE": return "bg-green-100 text-green-800 border-green-200";
-      case "OCCUPIED": return "bg-red-100 text-red-800 border-red-200";
-      case "RESERVED": return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "NEEDS_CLEANING": return "bg-gray-100 text-gray-700 border-gray-300";
-      default: return "bg-gray-100 text-gray-800 border-gray-300";
+  const handleAssignWaiter = (waiterId) => {
+    dispatch(assignWaiter({ id: table.id, waiterId: waiterId }))
+    dispatch(fetchTables())
+  };
+
+  const handleUpdateTable = () => {
+    const seatsNum = parseInt(editedSeats)
+    if (!editedName || !editedSeats || isNaN(seatsNum)) {
+      alert("Please enter valid name and seats")
+      return
     }
-  };
+    dispatch(updateTable({ id: table.id, data: { name: editedName, seats: seatsNum } }))
+  }
 
-  const getIcon = (status) => {
-    switch (status) {
-      case "AVAILABLE": return <Sparkles className="w-8 h-8 text-green-600" />;
-      case "OCCUPIED": return <Users className="w-8 h-8 text-red-600" />;
-      case "RESERVED": return <Clock className="w-8 h-8 text-yellow-600" />;
-      case "NEEDS_CLEANING": return <AlertCircle className="w-8 h-8 text-gray-600" />;
-      default: return null;
+  const handleDeleteTable = () => {
+    if (confirm("Are you sure you want to delete this table?")) {
+      dispatch(deleteTable(table.id))
     }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    window.location.href = "/";
-  };
+  }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 bg-gray-900 text-white flex flex-col">
-        <div className="p-6 border-b border-gray-800">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center">
-              <ChefHat className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-xl font-bold">RestaurantOS</h1>
+    <Dialog>
+      <DialogTrigger asChild>
+        <button
+          className={`relative p-6 rounded-lg border-2 transition-all hover:scale-105 ${getStatusColor(table.status)}`}
+        >
+          <div className="flex flex-col items-center gap-2">
+            {getStatusIcon(table.status)}
+            <span className="text-xl font-bold">{table.name}</span>
+            <span className="text-sm">{table.seats} seats</span>
+            {assignedWaiter && (
+              <Badge variant="secondary" className="text-xs mt-2">
+                {assignedWaiter.name.split(" ")[0]}
+              </Badge>
+            )}
           </div>
+        </button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{table.name}</DialogTitle>
+          <DialogDescription>Manage table status and assignments</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-6 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Table Name</Label>
+            <Input
+              id="name"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="seats">Capacity (seats)</Label>
+            <Input
+              id="seats"
+              type="number"
+              value={editedSeats}
+              onChange={(e) => setEditedSeats(e.target.value)}
+            />
+          </div>
+
+          <Button onClick={handleUpdateTable}>Save Changes</Button>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Current Status</label>
+            <div className="grid grid-cols-2 gap-2">
+              {(["AVAILABLE", "OCCUPIED", "RESERVED", "NEEDS_CLEANING"]).map(
+                (status) => (
+                  <Button
+                    key={status}
+                    variant={table.status === status ? "default" : "outline"}
+                    onClick={() => handleUpdateTableStatus(status)}
+                    className="justify-start"
+                  >
+                    {status.replace("_", " ")}
+                  </Button>
+                ),
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Assign Waiter</label>
+            <Select
+              value={table.assignedTo || ""}
+              onValueChange={(value) => handleAssignWaiter(value)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a waiter" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Unassigned</SelectItem>
+                {waiters.map((waiter) => (
+                  <SelectItem key={waiter.id} value={waiter.id}>
+                    {waiter.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2 pt-4 border-t">
+            <label className="text-sm font-medium">Customer Ordering</label>
+            <div className="flex gap-2">
+              <Button onClick={() => showQRCode(table.id)} className="flex-1" variant="outline">
+                <QrCode className="mr-2 h-4 w-4" />
+                Show QR Code
+              </Button>
+              <Button onClick={() => copyUrl(table.id)} className="flex-1" variant="outline">
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Copy Link
+              </Button>
+            </div>
+          </div>
+
+          <Button variant="destructive" onClick={handleDeleteTable}>Delete Table</Button>
         </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
 
-        <nav className="flex-1 p-4">
-          <ul className="space-y-1">
-            {menuItems.map((item) => (
-              <li
-                key={item.name}
-                className={`rounded-lg transition ${
-                  location.pathname === item.path ? "bg-gray-800 font-medium" : "hover:bg-gray-800"
-                }`}
-              >
-                <Link to={item.path} className="flex items-center gap-3 px-4 py-3">
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.name}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+export default function TablesPage() {
+  const dispatch = useDispatch()
+  const { tables } = useSelector((state) => state.table)
+  const [qrDialogOpen, setQrDialogOpen] = useState(false)
+  const [qrTableId, setQrTableId] = useState("")
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [newName, setNewName] = useState("")
+  const [newSeats, setNewSeats] = useState("")
+  const [users, setUsers] = useState([])
+  const fetchUsers = async () => {
+    try {
+      const response = await API.get("/user")
+      setUsers(response.data.data)
+    } catch (error) {
+      toast.error("Could not fetch User list")
+    }
+  }
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+  useEffect(() => {
+    dispatch(fetchTables())
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        dispatch(fetchTables())
+      }
+    }, 30000)
 
-        <div className="p-6 border-t border-gray-800">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-              A
-            </div>
-            <div>
-              <p className="font-medium">Admin User</p>
-              <p className="text-sm text-gray-400">ADMIN</p>
-            </div>
+    return () => clearInterval(interval)
+  }, [dispatch])
+
+  const handleCreateTable = () => {
+    const seatsNum = parseInt(newSeats)
+    if (!newName || !newSeats || isNaN(seatsNum)) {
+      alert("Please enter valid name and seats")
+      return
+    }
+    dispatch(createTable({ name: newName, seats: seatsNum }))
+    setCreateDialogOpen(false)
+    setNewName("")
+    setNewSeats("")
+  }
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "AVAILABLE":
+        return "bg-chart-2/10 text-chart-2 border-chart-2/30 hover:bg-chart-2/20"
+      case "OCCUPIED":
+        return "bg-chart-3/10 text-chart-3 border-chart-3/30 hover:bg-chart-3/20"
+      case "RESERVED":
+        return "bg-chart-1/10 text-chart-1 border-chart-1/30 hover:bg-chart-1/20"
+      case "NEEDS_CLEANING":
+        return "bg-muted text-muted-foreground border-border hover:bg-muted"
+      default:
+        return "bg-muted text-muted-foreground border-border"
+    }
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "AVAILABLE":
+        return <Sparkles className="h-5 w-5" />
+      case "OCCUPIED":
+        return <Users className="h-5 w-5" />
+      case "RESERVED":
+        return <Clock className="h-5 w-5" />
+      case "NEEDS_CLEANING":
+        return <AlertCircle className="h-5 w-5" />
+    }
+  }
+  const waiters = users.filter((u) => u.role === "WAITER")
+  const statusCounts = {
+    AVAILABLE: tables.filter((t) => t.status === "AVAILABLE").length,
+    OCCUPIED: tables.filter((t) => t.status === "OCCUPIED").length,
+    RESERVED: tables.filter((t) => t.status === "RESERVED").length,
+    NEEDS_CLEANING: tables.filter((t) => t.status === "NEEDS_CLEANING").length,
+  }
+
+  const getCustomerUrl = (tableId) => {
+    if (typeof window !== "undefined") {
+      return `${window.location.origin}?tableId=${tableId}`
+    }
+    return ""
+  }
+
+  const showQRCode = (tableId) => {
+    setQrTableId(tableId)
+    setQrDialogOpen(true)
+  }
+
+  const copyUrl = (tableId) => {
+    const url = getCustomerUrl(tableId)
+    navigator.clipboard.writeText(url)
+    alert("Link copied to clipboard!")
+  }
+
+  return (
+    <div className="flex h-screen">
+      <Sidebar />
+      <div className="flex-1 overflow-auto">
+        <div className="p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground">Table Management</h1>
+            <p className="text-muted-foreground mt-1">Monitor and manage restaurant tables</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center justify-center gap-2 bg-white text-gray-900 py-2.5 rounded-lg font-medium hover:bg-gray-100 transition"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 overflow-auto p-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Table Management</h1>
-          <p className="text-gray-600 mt-1">Monitor and manage restaurant tables</p>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-600">Available</p>
-              <Sparkles className="w-8 h-8 text-green-600" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{statusCounts.available}</p>
+          <div className="grid gap-4 md:grid-cols-4 mb-8">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Available</p>
+                    <p className="text-2xl font-bold text-chart-2">{statusCounts.AVAILABLE}</p>
+                  </div>
+                  <Sparkles className="h-8 w-8 text-chart-2/60" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Occupied</p>
+                    <p className="text-2xl font-bold text-chart-3">{statusCounts.OCCUPIED}</p>
+                  </div>
+                  <Users className="h-8 w-8 text-chart-3/60" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Reserved</p>
+                    <p className="text-2xl font-bold text-chart-1">{statusCounts.RESERVED}</p>
+                  </div>
+                  <Clock className="h-8 w-8 text-chart-1/60" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Needs Cleaning</p>
+                    <p className="text-2xl font-bold text-muted-foreground">{statusCounts.NEEDS_CLEANING}</p>
+                  </div>
+                  <AlertCircle className="h-8 w-8 text-muted-foreground/60" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-600">Occupied</p>
-              <Users className="w-8 h-8 text-red-600" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{statusCounts.occupied}</p>
+          <div className="mb-4">
+            <Button onClick={() => setCreateDialogOpen(true)}>Create New Table</Button>
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-600">Reserved</p>
-              <Clock className="w-8 h-8 text-yellow-600" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{statusCounts.reserved}</p>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-medium text-gray-600">Needs Cleaning</p>
-              <AlertCircle className="w-8 h-8 text-gray-600" />
-            </div>
-            <p className="text-3xl font-bold text-gray-900">{statusCounts.needsCleaning}</p>
-          </div>
-        </div>
-
-        {/* All Tables */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">All Tables</h2>
-          <p className="text-sm text-gray-600 mb-6">Click on a table to manage its status and assignments</p>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {tables.map((table) => (
-              <div
-                key={table.id}
-                className={`p-8 rounded-xl border-2 text-center cursor-pointer transition hover:scale-105 ${getStatusStyle(table.status)}`}
-              >
-                {getIcon(table.status)}
-                <p className="text-2xl font-bold mt-4">Table {table.tableNumber}</p>
-                <p className="text-sm text-gray-600 mt-1">{table.seats} seats</p>
-                {table.assignedTo && (
-                  <span className="inline-block mt-3 px-3 py-1 bg-white/80 rounded-full text-sm font-medium">
-                    Sarah
-                  </span>
-                )}
+          <Card>
+            <CardHeader>
+              <CardTitle>All Tables</CardTitle>
+              <CardDescription>Click on a table to manage its status and assignments</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                {tables.map((table) => (
+                  <TableItem
+                    key={table.id}
+                    table={table}
+                    waiters={waiters}
+                    getStatusColor={getStatusColor}
+                    getStatusIcon={getStatusIcon}
+                    showQRCode={showQRCode}
+                    copyUrl={copyUrl}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
+
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Customer Dashboard QR Code</DialogTitle>
+            <DialogDescription>{tables.find((t) => t.id === qrTableId)?.name} - Full Experience</DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-4 py-6">
+            <div className="bg-white p-4 rounded-lg">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=256x256&data=${encodeURIComponent(getCustomerUrl(qrTableId))}`}
+                alt="QR Code"
+                className="w-64 h-64"
+              />
+            </div>
+            <p className="text-sm text-center text-muted-foreground">
+              Scan to access the customer dashboard with menu, orders, and assistance
+            </p>
+            <Button onClick={() => copyUrl(qrTableId)} className="w-full" variant="outline">
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Copy Dashboard Link
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Table</DialogTitle>
+            <DialogDescription>Enter table details</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-name">Table Name</Label>
+              <Input
+                id="new-name"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="new-seats">Capacity (seats)</Label>
+              <Input
+                id="new-seats"
+                type="number"
+                value={newSeats}
+                onChange={(e) => setNewSeats(e.target.value)}
+              />
+            </div>
+
+            <Button onClick={handleCreateTable}>Create Table</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }
